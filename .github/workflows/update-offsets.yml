@@ -56,7 +56,10 @@ jobs:
               data = fetch_json("https://raw.githubusercontent.com/sezzyaep/CS2-OFFSETS/main/offsets.json")
               if not data:
                   return None
+              
+              # sezzyaep doğrudan client.dll altındaki veya doğrudan anahtarları döner
               client_offsets = data.get("client.dll", data)
+              
               return {
                   "dwViewMatrix": client_offsets.get("dwViewMatrix"),
                   "dwLocalPlayerPawn": client_offsets.get("dwLocalPlayerPawn"),
@@ -143,7 +146,7 @@ jobs:
           if git status --porcelain | grep -q "offsets.json"; then
             echo "Offset changes detected, committing updates..."
             git add offsets.json
-            git commit -m "chore: auto update CS2 offsets"
+            git commit -m "chore: fix sezzyaep offset parsing and update"
             git push
 
             echo "Triggering build-go.yml workflow..."
