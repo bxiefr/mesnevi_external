@@ -2,17 +2,50 @@
     "dwViewMatrix": 39243744,
     "dwLocalPlayerPawn": 39220952,
     "dwEntityList": 41011384,
-    "m_hPlayerPawn": null,
-    "m_iHealth": null,
-    "m_lifeState": null,
-    "m_iTeamNum": null,
-    "m_vOldOrigin": null,
-    "m_pGameSceneNode": null,
-    "m_modelState": null,
+    "m_hPlayerPawn": {
+        "offset": 2348,
+        "type": "CHandle<C_CSPlayerPawn>"
+    },
+    "m_iHealth": {
+        "offset": 844,
+        "type": "int32"
+    },
+    "m_lifeState": {
+        "offset": 852,
+        "type": "uint8"
+    },
+    "m_iTeamNum": {
+        "offset": 999,
+        "type": "uint8"
+    },
+    "m_vOldOrigin": {
+        "offset": 5284,
+        "type": "Vector"
+    },
+    "m_pGameSceneNode": {
+        "offset": 816,
+        "type": "CGameSceneNode*"
+    },
+    "m_modelState": {
+        "offset": 320,
+        "type": "CModelState"
+    },
     "m_boneArray": 128,
-    "m_nodeToWorld": null,
-    "m_sSanitizedPlayerName": null,
-    "m_ArmorValue": null,
-    "m_pBulletServices": null,
+    "m_nodeToWorld": {
+        "offset": 16,
+        "type": "CTransformWS"
+    },
+    "m_sSanitizedPlayerName": {
+        "offset": 2168,
+        "type": "CUtlString"
+    },
+    "m_ArmorValue": {
+        "offset": 7888,
+        "type": "int32"
+    },
+    "m_pBulletServices": {
+        "offset": 5488,
+        "type": "CCSPlayer_BulletServices*"
+    },
     "m_totalHitsOnServer": null
 }
