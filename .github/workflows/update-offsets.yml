@@ -53,30 +53,39 @@ jobs:
 
           def get_sezzyaep():
               print("Fetching from sezzyaep...")
-              data = fetch_json("https://raw.githubusercontent.com/sezzyaep/CS2-OFFSETS/main/offsets.json")
-              if not data:
+              raw_offsets = fetch_json("https://raw.githubusercontent.com/sezzyaep/CS2-OFFSETS/main/offsets.json")
+              raw_client = fetch_json("https://raw.githubusercontent.com/sezzyaep/CS2-OFFSETS/main/client_dll.json")
+              
+              if not raw_offsets:
                   return None
-              
-              # sezzyaep doğrudan client.dll altındaki veya doğrudan anahtarları döner
-              client_offsets = data.get("client.dll", data)
-              
+
+              # Eğer client_dll.json varsa classes yapısını al, yoksa offsets içinden veya boş sözlük kullan
+              client_data = raw_client if raw_client else raw_offsets
+              classes = client_data.get("client.dll", client_data).get("classes", {})
+
+              def get_field_offset(class_name, field_name):
+                  fields = classes.get(class_name, {}).get("fields", {})
+                  return fields.get(field_name)
+
+              client_offsets = raw_offsets.get("client.dll", raw_offsets)
+
               return {
                   "dwViewMatrix": client_offsets.get("dwViewMatrix"),
                   "dwLocalPlayerPawn": client_offsets.get("dwLocalPlayerPawn"),
                   "dwEntityList": client_offsets.get("dwEntityList"),
-                  "m_hPlayerPawn": client_offsets.get("m_hPlayerPawn"),
-                  "m_iHealth": client_offsets.get("m_iHealth"),
-                  "m_lifeState": client_offsets.get("m_lifeState"),
-                  "m_iTeamNum": client_offsets.get("m_iTeamNum"),
-                  "m_vOldOrigin": client_offsets.get("m_vOldOrigin"),
-                  "m_pGameSceneNode": client_offsets.get("m_pGameSceneNode"),
-                  "m_modelState": client_offsets.get("m_modelState"),
-                  "m_boneArray": client_offsets.get("m_boneArray", 128),
-                  "m_nodeToWorld": client_offsets.get("m_nodeToWorld"),
-                  "m_sSanitizedPlayerName": client_offsets.get("m_sSanitizedPlayerName"),
-                  "m_ArmorValue": client_offsets.get("m_ArmorValue"),
-                  "m_pBulletServices": client_offsets.get("m_pBulletServices"),
-                  "m_totalHitsOnServer": client_offsets.get("m_totalHitsOnServer")
+                  "m_hPlayerPawn": get_field_offset("CCSPlayerController", "m_hPlayerPawn") or client_offsets.get("m_hPlayerPawn"),
+                  "m_iHealth": get_field_offset("C_BaseEntity", "m_iHealth") or client_offsets.get("m_iHealth"),
+                  "m_lifeState": get_field_offset("C_BaseEntity", "m_lifeState") or client_offsets.get("m_lifeState"),
+                  "m_iTeamNum": get_field_offset("C_BaseEntity", "m_iTeamNum") or client_offsets.get("m_iTeamNum"),
+                  "m_vOldOrigin": get_field_offset("C_BasePlayerPawn", "m_vOldOrigin") or client_offsets.get("m_vOldOrigin"),
+                  "m_pGameSceneNode": get_field_offset("C_BaseEntity", "m_pGameSceneNode") or client_offsets.get("m_pGameSceneNode"),
+                  "m_modelState": get_field_offset("CSkeletonInstance", "m_modelState") or client_offsets.get("m_modelState"),
+                  "m_boneArray": get_field_offset("C_CSGO_PreviewModel", "m_boneArray") or get_field_offset("CModelConfig", "m_boneArray") or client_offsets.get("m_boneArray", 128),
+                  "m_nodeToWorld": get_field_offset("CGameSceneNode", "m_nodeToWorld") or client_offsets.get("m_nodeToWorld"),
+                  "m_sSanitizedPlayerName": get_field_offset("CCSPlayerController", "m_sSanitizedPlayerName") or client_offsets.get("m_sSanitizedPlayerName"),
+                  "m_ArmorValue": get_field_offset("CCSPlayerController", "m_ArmorValue") or get_field_offset("C_CSPlayerPawn", "m_ArmorValue") or client_offsets.get("m_ArmorValue"),
+                  "m_pBulletServices": get_field_offset("C_CSPlayerPawn", "m_pBulletServices") or client_offsets.get("m_pBulletServices"),
+                  "m_totalHitsOnServer": get_field_offset("CCSPlayerController", "m_totalHitsOnServer") or client_offsets.get("m_totalHitsOnServer")
               }
 
           def get_a2x():
@@ -146,7 +155,7 @@ jobs:
           if git status --porcelain | grep -q "offsets.json"; then
             echo "Offset changes detected, committing updates..."
             git add offsets.json
-            git commit -m "chore: fix sezzyaep offset parsing and update"
+            git commit -m "chore: update offsets using sezzyaep client_dll and offsets json"
             git push
 
             echo "Triggering build-go.yml workflow..."
