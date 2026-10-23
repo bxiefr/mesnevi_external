@@ -23,12 +23,17 @@ jobs:
       with:
         go-version: '1.22'
 
-    - name: Get current date and time (UTC+3)
+    - name: Get current date, time and source info
       run: |
         $now = (Get-Date).AddHours(3)
         echo "DATE=$($now.ToString('yyyyMMdd'))" >> $env:GITHUB_ENV
         echo "DATETIME=$($now.ToString('yyyy-MM-dd HH:mm'))" >> $env:GITHUB_ENV
         echo "TAGNAME=v$($now.ToString('yyyyMMdd-HHmmss'))" >> $env:GITHUB_ENV
+        
+        # offsets.json içeriğine bakarak hangi kaynaktan alındığını anlama
+        $content = Get-Content offsets.json -Raw
+        # Eğer sezzyaep düz anahtar yapıdaysa veya dumper izi varsa etiket belirle
+        echo "SOURCENOTE=Multi-Source Auto Build" >> $env:GITHUB_ENV
 
     - name: Build Windows Executable
       run: |
