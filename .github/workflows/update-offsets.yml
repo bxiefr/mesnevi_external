@@ -21,46 +21,78 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Fetch and Process Offsets
+      - name: Fetch and Process Offsets (a2x & sezzyaep Fallback)
         run: |
           python -c '
           import urllib.request
           import json
 
-          OFFSETS_URL = "https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/offsets.json"
-          CLIENT_URL = "https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/client_dll.json"
+          def fetch_json(url):
+              try:
+                  req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                  with urllib.request.urlopen(req, timeout=10) as response:
+                      return json.loads(response.read().decode())
+              except Exception as e:
+                  print(f"Failed to fetch {url}: {e}")
+                  return None
 
-          req_off = urllib.request.urlopen(OFFSETS_URL)
-          raw_offsets = json.loads(req_off.read().decode())
+          # Primary Source (a2x)
+          raw_offsets = fetch_json("https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/offsets.json")
+          raw_client = fetch_json("https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/client_dll.json")
 
-          req_cli = urllib.request.urlopen(CLIENT_URL)
-          raw_client = json.loads(req_cli.read().decode())
+          my_offsets = {}
+          source_used = "a2x"
 
-          classes = raw_client.get("client.dll", {}).get("classes", {})
+          if raw_offsets and raw_client:
+              classes = raw_client.get("client.dll", {}).get("classes", {})
 
-          def get_field_offset(class_name, field_name):
-              fields = classes.get(class_name, {}).get("fields", {})
-              return fields.get(field_name)
+              def get_field_offset(class_name, field_name):
+                  fields = classes.get(class_name, {}).get("fields", {})
+                  return fields.get(field_name)
 
-          my_offsets = {
-              "dwViewMatrix": raw_offsets.get("client.dll", {}).get("dwViewMatrix"),
-              "dwLocalPlayerPawn": raw_offsets.get("client.dll", {}).get("dwLocalPlayerPawn"),
-              "dwEntityList": raw_offsets.get("client.dll", {}).get("dwEntityList"),
-              "m_hPlayerPawn": get_field_offset("CCSPlayerController", "m_hPlayerPawn"),
-              "m_iHealth": get_field_offset("C_BaseEntity", "m_iHealth"),
-              "m_lifeState": get_field_offset("C_BaseEntity", "m_lifeState"),
-              "m_iTeamNum": get_field_offset("C_BaseEntity", "m_iTeamNum"),
-              "m_vOldOrigin": get_field_offset("C_BasePlayerPawn", "m_vOldOrigin"),
-              "m_pGameSceneNode": get_field_offset("C_BaseEntity", "m_pGameSceneNode"),
-              "m_modelState": get_field_offset("CSkeletonInstance", "m_modelState"),
-              "m_boneArray": get_field_offset("C_CSGO_PreviewModel", "m_boneArray") or get_field_offset("CModelConfig", "m_boneArray") or 128,
-              "m_nodeToWorld": get_field_offset("CGameSceneNode", "m_nodeToWorld"),
-              "m_sSanitizedPlayerName": get_field_offset("CCSPlayerController", "m_sSanitizedPlayerName"),
-              "m_ArmorValue": get_field_offset("CCSPlayerController", "m_ArmorValue") or get_field_offset("C_CSPlayerPawn", "m_ArmorValue"),
-              "m_pBulletServices": get_field_offset("C_CSPlayerPawn", "m_pBulletServices"),
-              "m_totalHitsOnServer": get_field_offset("CCSPlayer_BulletServices", "m_totalHitsOnServer")
-          }
+              my_offsets = {
+                  "dwViewMatrix": raw_offsets.get("client.dll", {}).get("dwViewMatrix"),
+                  "dwLocalPlayerPawn": raw_offsets.get("client.dll", {}).get("dwLocalPlayerPawn"),
+                  "dwEntityList": raw_offsets.get("client.dll", {}).get("dwEntityList"),
+                  "m_hPlayerPawn": get_field_offset("CCSPlayerController", "m_hPlayerPawn"),
+                  "m_iHealth": get_field_offset("C_BaseEntity", "m_iHealth"),
+                  "m_lifeState": get_field_offset("C_BaseEntity", "m_lifeState"),
+                  "m_iTeamNum": get_field_offset("C_BaseEntity", "m_iTeamNum"),
+                  "m_vOldOrigin": get_field_offset("C_BasePlayerPawn", "m_vOldOrigin"),
+                  "m_pGameSceneNode": get_field_offset("C_BaseEntity", "m_pGameSceneNode"),
+                  "m_modelState": get_field_offset("CSkeletonInstance", "m_modelState"),
+                  "m_boneArray": get_field_offset("C_CSGO_PreviewModel", "m_boneArray") or get_field_offset("CModelConfig", "m_boneArray") or 128,
+                  "m_nodeToWorld": get_field_offset("CGameSceneNode", "m_nodeToWorld"),
+                  "m_sSanitizedPlayerName": get_field_offset("CCSPlayerController", "m_sSanitizedPlayerName"),
+                  "m_ArmorValue": get_field_offset("CCSPlayerController", "m_ArmorValue") or get_field_offset("C_CSPlayerPawn", "m_ArmorValue")
+              }
 
+          # Fallback Source (sezzyaep) if a2x fails or returns empty/none
+          if not my_offsets or not any(my_offsets.values()):
+              print("Primary source (a2x) failed or outdated. Switching to fallback (sezzyaep)...")
+              fallback_data = fetch_json("https://raw.githubusercontent.com/sezzyaep/CS2-OFFSETS/main/offsets.json")
+              if fallback_data:
+                  source_used = "sezzyaep"
+                  # sezzyaep yapısına uygun eşleme (client.dll altındaki veya doğrudan gelen alanlar)
+                  client_offsets = fallback_data.get("client.dll", fallback_data)
+                  my_offsets = {
+                      "dwViewMatrix": client_offsets.get("dwViewMatrix"),
+                      "dwLocalPlayerPawn": client_offsets.get("dwLocalPlayerPawn"),
+                      "dwEntityList": client_offsets.get("dwEntityList"),
+                      "m_hPlayerPawn": client_offsets.get("m_hPlayerPawn"),
+                      "m_iHealth": client_offsets.get("m_iHealth"),
+                      "m_lifeState": client_offsets.get("m_lifeState"),
+                      "m_iTeamNum": client_offsets.get("m_iTeamNum"),
+                      "m_vOldOrigin": client_offsets.get("m_vOldOrigin"),
+                      "m_pGameSceneNode": client_offsets.get("m_pGameSceneNode"),
+                      "m_modelState": client_offsets.get("m_modelState"),
+                      "m_boneArray": client_offsets.get("m_boneArray", 128),
+                      "m_nodeToWorld": client_offsets.get("m_nodeToWorld"),
+                      "m_sSanitizedPlayerName": client_offsets.get("m_sSanitizedPlayerName"),
+                      "m_ArmorValue": client_offsets.get("m_ArmorValue")
+                  }
+
+          print(f"Offsets successfully fetched from: {source_used}")
           with open("offsets.json", "w", encoding="utf-8") as f:
               json.dump(my_offsets, f, indent=4)
           '
@@ -75,7 +107,7 @@ jobs:
           if git status --porcelain | grep -q "offsets.json"; then
             echo "Offset changes detected, committing updates..."
             git add offsets.json
-            git commit -m "chore: auto update CS2 offsets"
+            git commit -m "chore: auto update CS2 offsets with multi-source fallback"
             git push
 
             echo "Triggering build-go.yml workflow..."
