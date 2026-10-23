@@ -23,6 +23,9 @@ import (
 //go:embed offsets.json
 var embeddedOffsets []byte
 
+//go:embed hit.wav
+var embeddedHitSound []byte
+
 type Matrix [4][4]float32
 
 type Vector3 struct {
@@ -150,6 +153,15 @@ var (
 func init() {
 	runtime.LockOSThread()
 	rand.Seed(time.Now().UnixNano())
+	cachedHitPath = extractEmbeddedHitSound()
+}
+
+func extractEmbeddedHitSound() string {
+	tmpPath := filepath.Join(os.TempDir(), "hit.wav")
+	if _, err := os.Stat(tmpPath); os.IsNotExist(err) {
+		_ = os.WriteFile(tmpPath, embeddedHitSound, 0644)
+	}
+	return tmpPath
 }
 
 func hsvToRGB(h, s, v float64) (byte, byte, byte) {
