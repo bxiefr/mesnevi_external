@@ -51,6 +51,11 @@ jobs:
                   print(f"Failed to fetch {url}: {e}")
                   return None
 
+          def parse_val(val):
+              if isinstance(val, dict):
+                  return val.get("offset")
+              return val
+
           def get_sezzyaep():
               print("Fetching from sezzyaep...")
               raw_offsets = fetch_json("https://raw.githubusercontent.com/sezzyaep/CS2-OFFSETS/main/offsets.json")
@@ -59,33 +64,34 @@ jobs:
               if not raw_offsets:
                   return None
 
-              # Eğer client_dll.json varsa classes yapısını al, yoksa offsets içinden veya boş sözlük kullan
               client_data = raw_client if raw_client else raw_offsets
               classes = client_data.get("client.dll", client_data).get("classes", {})
 
               def get_field_offset(class_name, field_name):
-                  fields = classes.get(class_name, {}).get("fields", {})
-                  return fields.get(field_name)
+                  cls_data = classes.get(class_name, {})
+                  fields = cls_data.get("fields", {}) if isinstance(cls_data, dict) else {}
+                  val = fields.get(field_name)
+                  return parse_val(val)
 
               client_offsets = raw_offsets.get("client.dll", raw_offsets)
 
               return {
-                  "dwViewMatrix": client_offsets.get("dwViewMatrix"),
-                  "dwLocalPlayerPawn": client_offsets.get("dwLocalPlayerPawn"),
-                  "dwEntityList": client_offsets.get("dwEntityList"),
-                  "m_hPlayerPawn": get_field_offset("CCSPlayerController", "m_hPlayerPawn") or client_offsets.get("m_hPlayerPawn"),
-                  "m_iHealth": get_field_offset("C_BaseEntity", "m_iHealth") or client_offsets.get("m_iHealth"),
-                  "m_lifeState": get_field_offset("C_BaseEntity", "m_lifeState") or client_offsets.get("m_lifeState"),
-                  "m_iTeamNum": get_field_offset("C_BaseEntity", "m_iTeamNum") or client_offsets.get("m_iTeamNum"),
-                  "m_vOldOrigin": get_field_offset("C_BasePlayerPawn", "m_vOldOrigin") or client_offsets.get("m_vOldOrigin"),
-                  "m_pGameSceneNode": get_field_offset("C_BaseEntity", "m_pGameSceneNode") or client_offsets.get("m_pGameSceneNode"),
-                  "m_modelState": get_field_offset("CSkeletonInstance", "m_modelState") or client_offsets.get("m_modelState"),
-                  "m_boneArray": get_field_offset("C_CSGO_PreviewModel", "m_boneArray") or get_field_offset("CModelConfig", "m_boneArray") or client_offsets.get("m_boneArray", 128),
-                  "m_nodeToWorld": get_field_offset("CGameSceneNode", "m_nodeToWorld") or client_offsets.get("m_nodeToWorld"),
-                  "m_sSanitizedPlayerName": get_field_offset("CCSPlayerController", "m_sSanitizedPlayerName") or client_offsets.get("m_sSanitizedPlayerName"),
-                  "m_ArmorValue": get_field_offset("CCSPlayerController", "m_ArmorValue") or get_field_offset("C_CSPlayerPawn", "m_ArmorValue") or client_offsets.get("m_ArmorValue"),
-                  "m_pBulletServices": get_field_offset("C_CSPlayerPawn", "m_pBulletServices") or client_offsets.get("m_pBulletServices"),
-                  "m_totalHitsOnServer": get_field_offset("CCSPlayerController", "m_totalHitsOnServer") or client_offsets.get("m_totalHitsOnServer")
+                  "dwViewMatrix": parse_val(client_offsets.get("dwViewMatrix")),
+                  "dwLocalPlayerPawn": parse_val(client_offsets.get("dwLocalPlayerPawn")),
+                  "dwEntityList": parse_val(client_offsets.get("dwEntityList")),
+                  "m_hPlayerPawn": get_field_offset("CCSPlayerController", "m_hPlayerPawn") or parse_val(client_offsets.get("m_hPlayerPawn")),
+                  "m_iHealth": get_field_offset("C_BaseEntity", "m_iHealth") or parse_val(client_offsets.get("m_iHealth")),
+                  "m_lifeState": get_field_offset("C_BaseEntity", "m_lifeState") or parse_val(client_offsets.get("m_lifeState")),
+                  "m_iTeamNum": get_field_offset("C_BaseEntity", "m_iTeamNum") or parse_val(client_offsets.get("m_iTeamNum")),
+                  "m_vOldOrigin": get_field_offset("C_BasePlayerPawn", "m_vOldOrigin") or parse_val(client_offsets.get("m_vOldOrigin")),
+                  "m_pGameSceneNode": get_field_offset("C_BaseEntity", "m_pGameSceneNode") or parse_val(client_offsets.get("m_pGameSceneNode")),
+                  "m_modelState": get_field_offset("CSkeletonInstance", "m_modelState") or parse_val(client_offsets.get("m_modelState")),
+                  "m_boneArray": get_field_offset("C_CSGO_PreviewModel", "m_boneArray") or get_field_offset("CModelConfig", "m_boneArray") or parse_val(client_offsets.get("m_boneArray")) or 128,
+                  "m_nodeToWorld": get_field_offset("CGameSceneNode", "m_nodeToWorld") or parse_val(client_offsets.get("m_nodeToWorld")),
+                  "m_sSanitizedPlayerName": get_field_offset("CCSPlayerController", "m_sSanitizedPlayerName") or parse_val(client_offsets.get("m_sSanitizedPlayerName")),
+                  "m_ArmorValue": get_field_offset("CCSPlayerController", "m_ArmorValue") or get_field_offset("C_CSPlayerPawn", "m_ArmorValue") or parse_val(client_offsets.get("m_ArmorValue")),
+                  "m_pBulletServices": get_field_offset("C_CSPlayerPawn", "m_pBulletServices") or parse_val(client_offsets.get("m_pBulletServices")),
+                  "m_totalHitsOnServer": get_field_offset("CCSPlayerController", "m_totalHitsOnServer") or get_field_offset("CCSPlayer_BulletServices", "m_totalHitsOnServer") or parse_val(client_offsets.get("m_totalHitsOnServer"))
               }
 
           def get_a2x():
@@ -98,12 +104,12 @@ jobs:
               classes = raw_client.get("client.dll", {}).get("classes", {})
               def get_field_offset(class_name, field_name):
                   fields = classes.get(class_name, {}).get("fields", {})
-                  return fields.get(field_name)
+                  return parse_val(fields.get(field_name))
 
               return {
-                  "dwViewMatrix": raw_offsets.get("client.dll", {}).get("dwViewMatrix"),
-                  "dwLocalPlayerPawn": raw_offsets.get("client.dll", {}).get("dwLocalPlayerPawn"),
-                  "dwEntityList": raw_offsets.get("client.dll", {}).get("dwEntityList"),
+                  "dwViewMatrix": parse_val(raw_offsets.get("client.dll", {}).get("dwViewMatrix")),
+                  "dwLocalPlayerPawn": parse_val(raw_offsets.get("client.dll", {}).get("dwLocalPlayerPawn")),
+                  "dwEntityList": parse_val(raw_offsets.get("client.dll", {}).get("dwEntityList")),
                   "m_hPlayerPawn": get_field_offset("CCSPlayerController", "m_hPlayerPawn"),
                   "m_iHealth": get_field_offset("C_BaseEntity", "m_iHealth"),
                   "m_lifeState": get_field_offset("C_BaseEntity", "m_lifeState"),
@@ -116,7 +122,7 @@ jobs:
                   "m_sSanitizedPlayerName": get_field_offset("CCSPlayerController", "m_sSanitizedPlayerName"),
                   "m_ArmorValue": get_field_offset("CCSPlayerController", "m_ArmorValue") or get_field_offset("C_CSPlayerPawn", "m_ArmorValue"),
                   "m_pBulletServices": get_field_offset("C_CSPlayerPawn", "m_pBulletServices"),
-                  "m_totalHitsOnServer": get_field_offset("CCSPlayerController", "m_totalHitsOnServer")
+                  "m_totalHitsOnServer": get_field_offset("CCSPlayerController", "m_totalHitsOnServer") or get_field_offset("CCSPlayer_BulletServices", "m_totalHitsOnServer")
               }
 
           my_offsets = None
@@ -128,7 +134,7 @@ jobs:
           elif choice == "a2x":
               my_offsets = get_a2x()
               used_source = "a2x"
-          else: # auto
+          else:
               my_offsets = get_sezzyaep()
               used_source = "sezzyaep"
               if not my_offsets or not any(my_offsets.values()):
