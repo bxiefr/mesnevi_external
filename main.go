@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
@@ -63,29 +64,29 @@ type Entity struct {
 }
 
 type Offset struct {
-	DwViewMatrix         uintptr `json:"dwViewMatrix"`
-	DwLocalPlayerPawn    uintptr `json:"dwLocalPlayerPawn"`
-	DwEntityList         uintptr `json:"dwEntityList"`
-	M_hPlayerPawn        uintptr `json:"m_hPlayerPawn"`
-	M_iHealth            uintptr `json:"m_iHealth"`
-	M_lifeState          uintptr `json:"m_lifeState"`
-	M_iTeamNum           uintptr `json:"m_iTeamNum"`
-	M_vOldOrigin         uintptr `json:"m_vOldOrigin"`
-	M_pGameSceneNode     uintptr `json:"m_pGameSceneNode"`
-	M_modelState         uintptr `json:"m_modelState"`
-	M_boneArray          uintptr `json:"m_boneArray"`
-	M_nodeToWorld        uintptr `json:"m_nodeToWorld"`
+	DwViewMatrix           uintptr `json:"dwViewMatrix"`
+	DwLocalPlayerPawn      uintptr `json:"dwLocalPlayerPawn"`
+	DwEntityList           uintptr `json:"dwEntityList"`
+	M_hPlayerPawn          uintptr `json:"m_hPlayerPawn"`
+	M_iHealth              uintptr `json:"m_iHealth"`
+	M_lifeState            uintptr `json:"m_lifeState"`
+	M_iTeamNum             uintptr `json:"m_iTeamNum"`
+	M_vOldOrigin           uintptr `json:"m_vOldOrigin"`
+	M_pGameSceneNode       uintptr `json:"m_pGameSceneNode"`
+	M_modelState           uintptr `json:"m_modelState"`
+	M_boneArray            uintptr `json:"m_boneArray"`
+	M_nodeToWorld          uintptr `json:"m_nodeToWorld"`
 	M_sSanitizedPlayerName uintptr `json:"m_sSanitizedPlayerName"`
-	M_ArmorValue         uintptr `json:"m_ArmorValue"`
-	M_pBulletServices    uintptr `json:"m_pBulletServices"`    // YENİ: Bullet Services
-	M_totalHitsOnServer  uintptr `json:"m_totalHitsOnServer"` // YENİ: Total Hits
+	M_ArmorValue           uintptr `json:"m_ArmorValue"`
+	M_pBulletServices      uintptr `json:"m_pBulletServices"`
+	M_totalHitsOnServer    uintptr `json:"m_totalHitsOnServer"`
 }
 
 var (
 	user32                     = windows.NewLazySystemDLL("user32.dll")
 	gdi32                      = windows.NewLazySystemDLL("gdi32.dll")
 	kernel32                   = windows.NewLazySystemDLL("kernel32.dll")
-	winmm                      = windows.NewLazySystemDLL("winmm.dll") // YENİ: Ses için DLL
+	winmm                      = windows.NewLazySystemDLL("winmm.dll")
 	getSystemMetrics           = user32.NewProc("GetSystemMetrics")
 	setLayeredWindowAttributes = user32.NewProc("SetLayeredWindowAttributes")
 	setWindowDisplayAffinity   = user32.NewProc("SetWindowDisplayAffinity")
@@ -97,7 +98,7 @@ var (
 	createPen                  = gdi32.NewProc("CreatePen")
 	GetAsyncKeyState           = user32.NewProc("GetAsyncKeyState")
 	beepProc                   = kernel32.NewProc("Beep")
-	playSoundProc              = winmm.NewProc("PlaySoundW") // YENİ: Ses oynatma fonksiyonu
+	playSoundProc              = winmm.NewProc("PlaySoundW")
 )
 
 const (
@@ -116,14 +117,14 @@ var (
 	armorBarRendering   bool    = true
 	healthTextRendering bool    = true
 	distanceRendering   bool    = true
-	hitmarkerRendering  bool    = true // YENİ: Hitmarker
-	hitSoundRendering   bool    = true // YENİ: Hit Sound
+	hitmarkerRendering  bool    = true
+	hitSoundRendering   bool    = true
 	frameDelay          uint32  = 15
 	currentHue          float64 = 0
 
-	// Hitmarker takibi için değişkenler
-	lastHits    int32 = -1
-	lastHitTime time.Time
+	lastHits      int32 = -1
+	lastHitTime   time.Time
+	cachedHitPath string
 )
 
 const asciiArt = `
@@ -145,7 +146,7 @@ var (
 	redBonePen         uintptr
 	outlinePen         uintptr
 	armorPen           uintptr
-	hitmarkerPen       uintptr // YENİ: Hitmarker kalemi
+	hitmarkerPen       uintptr
 	skeletonColor      uintptr
 	skeletonColorIndex int
 )
@@ -157,7 +158,7 @@ func init() {
 }
 
 func extractEmbeddedHitSound() string {
-	tmpPath := filepath.Join(os.TempDir(), "hit.wav")
+	tmpPath := filepath.Join(os.TempDir(), "mesnevi_hit.wav")
 	if _, err := os.Stat(tmpPath); os.IsNotExist(err) {
 		_ = os.WriteFile(tmpPath, embeddedHitSound, 0644)
 	}
@@ -203,9 +204,11 @@ func playBeep(enabled bool) {
 	}
 }
 
-// YENİ: Hit Sound oynatma fonksiyonu
 func playHitSound() {
-	soundPath, _ := windows.UTF16PtrFromString("hit.wav")
+	if cachedHitPath == "" {
+		return
+	}
+	soundPath, _ := windows.UTF16PtrFromString(cachedHitPath)
 	playSoundProc.Call(uintptr(unsafe.Pointer(soundPath)), 0, uintptr(SND_FILENAME|SND_ASYNC|SND_NODEFAULT))
 }
 
@@ -306,7 +309,6 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		return entities
 	}
 
-	// YENİ: Local Player'ın mermi isabet sayısını (hits) okuma
 	if hitmarkerRendering {
 		var bulletServices uintptr
 		var totalHits int32
@@ -315,7 +317,7 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 			err = read(procHandle, bulletServices+offsets.M_totalHitsOnServer, &totalHits)
 			if err == nil {
 				if lastHits == -1 {
-					lastHits = totalHits // İlk defa okunuyorsa eşitle
+					lastHits = totalHits
 				} else if totalHits > lastHits {
 					lastHitTime = time.Now()
 					if hitSoundRendering {
@@ -323,7 +325,7 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 					}
 					lastHits = totalHits
 				} else if totalHits < lastHits {
-					lastHits = totalHits // Map değiştiğinde veya öldüğünde sıfırlanma durumu
+					lastHits = totalHits
 				}
 			}
 		}
@@ -532,7 +534,6 @@ func drawSkeleton(hdc win.HDC, pen uintptr, bones map[string]Vector2) {
 	win.LineTo(hdc, int32(bones["hand_R"].X), int32(bones["hand_R"].Y))
 }
 
-// YENİ: Hitmarker'ı ekranın tam ortasına çizme fonksiyonu
 func drawHitmarker(hdc win.HDC, pen uintptr, screenWidth, screenHeight uintptr) {
 	centerX := int32(screenWidth / 2)
 	centerY := int32(screenHeight / 2)
@@ -541,13 +542,11 @@ func drawHitmarker(hdc win.HDC, pen uintptr, screenWidth, screenHeight uintptr) 
 
 	win.SelectObject(hdc, win.HGDIOBJ(pen))
 
-	// Sol Üst'ten Sağ Alt'a
 	win.MoveToEx(hdc, int(centerX-size), int(centerY-size), nil)
 	win.LineTo(hdc, int32(centerX-gap), int32(centerY-gap))
 	win.MoveToEx(hdc, int(centerX+gap), int(centerY+gap), nil)
 	win.LineTo(hdc, int32(centerX+size), int32(centerY+size))
 
-	// Sağ Üst'ten Sol Alt'a
 	win.MoveToEx(hdc, int(centerX+size), int(centerY-size), nil)
 	win.LineTo(hdc, int32(centerX+gap), int32(centerY-gap))
 	win.MoveToEx(hdc, int(centerX-gap), int(centerY+gap), nil)
@@ -785,7 +784,7 @@ func renderUI() {
 	printStatus("[F6] Player Name", nameRendering)
 	printStatus("[F7] Distance Display", distanceRendering)
 	printStatus("[F9] Armor Bar", armorBarRendering)
-	printStatus("[F10] Hitmarker & Sound", hitmarkerRendering) // YENİ
+	printStatus("[F10] Hitmarker & Sound", hitmarkerRendering)
 
 	colorNames := []string{"MAVİ", "YEŞİL", "KIRMIZI"}
 	currentColor := colorNames[skeletonColorIndex]
@@ -854,7 +853,7 @@ func listenHotkeys() {
 			armorBarRendering = !armorBarRendering
 			playBeep(armorBarRendering)
 		}
-		if isKeyPressed(0x79) { // YENİ: F10 tuşu Hitmarker & Sound
+		if isKeyPressed(0x79) { // F10
 			hitmarkerRendering = !hitmarkerRendering
 			hitSoundRendering = hitmarkerRendering
 			playBeep(hitmarkerRendering)
@@ -869,7 +868,7 @@ func listenHotkeys() {
 }
 
 func main() {
-	fmt.Print("\033[H\033[2J") 
+	fmt.Print("\033[H\033[2J")
 	go startRGBUI()
 	go listenHotkeys()
 
@@ -951,7 +950,6 @@ func main() {
 	if armorPen == 0 { return }
 	defer win.DeleteObject(win.HGDIOBJ(armorPen))
 
-	// YENİ: Hitmarker Kalemi
 	hitmarkerPen, _, _ = createPen.Call(win.PS_SOLID, 2, 0xffffff)
 	if hitmarkerPen == 0 { return }
 	defer win.DeleteObject(win.HGDIOBJ(hitmarkerPen))
@@ -992,7 +990,6 @@ func main() {
 			}
 		}
 
-		// YENİ: Vuruş yapıldıysa son 300 ms boyunca ekranın ortasına Hitmarker'ı çiz
 		if hitmarkerRendering && time.Since(lastHitTime) < 300*time.Millisecond {
 			drawHitmarker(win.HDC(memhdc), hitmarkerPen, screenWidth, screenHeight)
 		}
