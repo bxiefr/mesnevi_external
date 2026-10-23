@@ -30,20 +30,17 @@ jobs:
         echo "DATETIME=$($now.ToString('yyyy-MM-dd HH:mm'))" >> $env:GITHUB_ENV
         echo "TAGNAME=v$($now.ToString('yyyyMMdd-HHmmss'))" >> $env:GITHUB_ENV
         
-        # offsets.json içeriğine bakarak hangi kaynaktan alındığını anlama
         $content = Get-Content offsets.json -Raw
-        # Eğer sezzyaep düz anahtar yapıdaysa veya dumper izi varsa etiket belirle
         echo "SOURCENOTE=Multi-Source Auto Build" >> $env:GITHUB_ENV
 
     - name: Build Windows Executable
       run: |
-        go build -o mesnevi.exe main.go memory.go
+        go build -o mesnevi.exe .
 
     - name: Prepare Release Folder
       run: |
         mkdir release_folder
         copy mesnevi.exe release_folder\
-        copy hit.wav release_folder\
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
@@ -59,6 +56,5 @@ jobs:
         body: ${{ env.DATETIME }}
         files: |
           release_folder/mesnevi.exe
-          release_folder/hit.wav
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
