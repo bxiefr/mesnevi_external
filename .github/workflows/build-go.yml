@@ -46,7 +46,7 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: mesnevi-${{ env.DATE }-${{ matrix.target_branch }}
+        name: mesnevi-${{ env.DATE }}-${{ matrix.target_branch }}
         path: release_folder/
 
     - name: Create GitHub Release
