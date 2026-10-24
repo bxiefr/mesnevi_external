@@ -3,9 +3,9 @@ name: Build Go Executable
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches: [ "v1.8.3main", "v1.8.2old", "v1.8.4neon" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "v1.8.3main" ]
 
 permissions:
   contents: write
@@ -45,15 +45,19 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: mesnevi-${{ env.DATE }}
+        name: mesnevi-${{ env.DATE }}-${{ github.ref_name }}
         path: release_folder/
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ env.TAGNAME }}
-        name: Build ${{ env.DATETIME }}
-        body: ${{ env.DATETIME }}
+        name: Build ${{ env.DATETIME }} (${{ github.ref_name }})
+        body: |
+          ### Build Details
+          - **Build Time (UTC+3):** ${{ env.DATETIME }}
+          - **Source Branch:** `${{ github.ref_name }}`
+          - **Status:** Stable / Automated
         files: |
           release_folder/mesnevi.exe
       env:
