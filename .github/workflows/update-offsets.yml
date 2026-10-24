@@ -27,6 +27,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: 'cli'
+          fetch-depth: 0 # Tüm branch'leri ve geçmişi çekmesini sağlar
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -160,6 +161,9 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
+          # Tüm uzak branch bilgilerini güncelle
+          git fetch origin
+          
           # Güncellenecek tüm branch'lerin listesi
           branches=("v1.8.3main" "v1.8.2old" "v1.8.4neon")
 
@@ -167,8 +171,8 @@ jobs:
             echo "Processing branch: $branch"
             git checkout "$branch" || git checkout -b "$branch" origin/"$branch"
             
-            # Yeni offsets dosyasını bu branch'e taşı
-            mv new_offsets.json offsets.json
+            # Dosyayı taşıdıktan sonra silinmemesi için cp (kopyala) kullanıyoruz
+            cp new_offsets.json offsets.json
             
             if git status --porcelain | grep -q "offsets.json"; then
               echo "Changes detected in $branch, committing..."
@@ -178,17 +182,14 @@ jobs:
             else
               echo "No changes needed for $branch."
             fi
-            
-            # Sonraki döngü için geri dön veya dosyayı tekrar hazırla
-            git checkout cli -- new_offsets.json
           done
 
           # Temizlik
           rm -f new_offsets.json
 
-          echo "Triggering central build-go.yml workflow..."
+          echo "Triggering central build-all.yml workflow..."
           curl -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-go.yml/dispatches \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-all.yml/dispatches \
             -d '{"ref":"cli"}'
