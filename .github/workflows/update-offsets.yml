@@ -186,9 +186,9 @@ jobs:
           # Temizlik
           rm -f new_offsets.json
 
-          echo "Triggering central build-all.yml workflow..."
+          echo "Triggering central build-go.yml workflow..."
           curl -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-all.yml/dispatches \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-go.yml/dispatches \
             -d '{"ref":"cli"}'
