@@ -771,7 +771,7 @@ func renderUI() {
 		fmt.Printf("\x1b[38;2;%d;%d;%dm%s\x1b[0m\n", r, g, b, line)
 	}
 
-	fmt.Println(chalk.Yellow.Color("        by bxiefr - v1.8.3\n"))
+	fmt.Println(chalk.Yellow.Color("        by bxiefr - v1.8.4neon\n"))
 	fmt.Println(chalk.Cyan.Color("=========================================="))
 	fmt.Println(chalk.White.Color("          KISAYOL TUŞLARI (HOTKEYS)"))
 	fmt.Println(chalk.Cyan.Color("=========================================="))
