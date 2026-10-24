@@ -304,7 +304,7 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		entityHeadBottom Vector3
 	)
 
-	err = read(procHandle, clientDll+offsets.DwLocalPlayerPawn, &localPlayerP)
+	err = read(procHandle, localPlayerP+offsets.DwLocalPlayerPawn, &localPlayerP)
 	if err != nil {
 		return entities
 	}
@@ -752,9 +752,10 @@ func initWindow(screenWidth uintptr, screenHeight uintptr) win.HWND {
 
 func printStatus(label string, status bool) {
 	if status {
-		fmt.Printf("  %-25s %s\n", label, chalk.Green.Color("[ AÇIK ]"))
+		// Tüm etiketler tam 9 karakter genişliğinde (soldan sağdan boşluklarla hizalı)
+		fmt.Printf("  %-25s %s\n", label, chalk.Green.Color("[  AÇIK   ]"))
 	} else {
-		fmt.Printf("  %-25s %s\n", label, chalk.Red.Color("[ KAPALI ]"))
+		fmt.Printf("  %-25s %s\n", label, chalk.Red.Color("[ KAPALI  ]"))
 	}
 }
 
@@ -784,10 +785,10 @@ func renderUI() {
 	printStatus("[F6] Player Name", nameRendering)
 	printStatus("[F7] Distance Display", distanceRendering)
 
-    colorNames := []string{"MAVİ", "YEŞİL", "KIRMIZI"}
+    colorNames := []string{"  MAVİ   ", "  YEŞİL  ", " KIRMIZI "}
     currentColor := colorNames[skeletonColorIndex]
 	
-    formattedColor := fmt.Sprintf("[ %-7s ]", currentColor)
+    formattedColor := fmt.Sprintf("[%s]", currentColor)
 
     fmt.Printf("  %-25s %s\n", "[F8] Skeleton Color", chalk.Yellow.Color(formattedColor))
 	
