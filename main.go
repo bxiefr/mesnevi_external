@@ -783,12 +783,13 @@ func renderUI() {
 	printStatus("[F5] Health Bar", healthBarRendering)
 	printStatus("[F6] Player Name", nameRendering)
 	printStatus("[F7] Distance Display", distanceRendering)
-	printStatus("[F9] Armor Bar", armorBarRendering)
-	printStatus("[F10] Hitmarker & Sound", hitmarkerRendering)
 
-	colorNames := []string{"MAVİ", "YEŞİL", "KIRMIZI"}
+    colorNames := []string{"MAVİ", "YEŞİL", "KIRMIZI"}
 	currentColor := colorNames[skeletonColorIndex]
 	fmt.Printf("  %-25s %s\n", "[F8] Skeleton Color", chalk.Yellow.Color("["+currentColor+"]"))
+	
+	printStatus("[F9] Armor Bar", armorBarRendering)
+	printStatus("[F10] Hitmarker & Sound", hitmarkerRendering)
 
 	fmt.Println(chalk.Cyan.Color("------------------------------------------"))
 	fmt.Println(chalk.Red.Color("  [END] Hileyi Kapat / Close Cheat"))
