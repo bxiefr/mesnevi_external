@@ -785,8 +785,11 @@ func renderUI() {
 	printStatus("[F7] Distance Display", distanceRendering)
 
     colorNames := []string{"MAVİ", "YEŞİL", "KIRMIZI"}
-	currentColor := colorNames[skeletonColorIndex]
-	fmt.Printf("  %-25s %s\n", "[F8] Skeleton Color", chalk.Yellow.Color("["+currentColor+"]"))
+    currentColor := colorNames[skeletonColorIndex]
+	
+    formattedColor := fmt.Sprintf("[ %-7s ]", currentColor)
+
+    fmt.Printf("  %-25s %s\n", "[F8] Skeleton Color", chalk.Yellow.Color(formattedColor))
 	
 	printStatus("[F9] Armor Bar", armorBarRendering)
 	printStatus("[F10] Hitmarker & Sound", hitmarkerRendering)
