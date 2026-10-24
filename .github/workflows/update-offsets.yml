@@ -171,20 +171,13 @@ jobs:
             echo "Processing branch: $branch"
             git checkout "$branch" || git checkout -b "$branch" origin/"$branch"
             
-            # Yeni offsets dosyasını kopyala
+            # Yeni offsets dosyasını kopyala (varsa eskisinin üzerine yazar)
             cp new_offsets.json offsets.json
             
-            # Git'e dosyayı ekle (Eğer içerik aynıysa hata vermemesi için zorlayabiliriz veya add edebiliriz)
+            # Git'e ekle ve değişiklik var mı yok mu takılmadan doğrudan commit at
             git add offsets.json
-            
-            # Eğer staged alanında değişiklik varsa commit at ve push'la
-            if ! git diff --cached --quiet; then
-              echo "Changes detected in $branch, committing..."
-              git commit -m "chore: auto-update offsets.json for $branch"
-              git push origin "$branch"
-            else
-              echo "No changes needed for $branch."
-            fi
+            git commit -m "chore: auto-update offsets.json for $branch" || echo "No changes to commit for $branch"
+            git push origin "$branch" || echo "Push skipped or failed for $branch"
           done
 
           # Temizlik
