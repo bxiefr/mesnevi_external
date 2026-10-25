@@ -165,7 +165,7 @@ jobs:
           git fetch origin
           
           # Güncellenecek tüm branch'lerin listesi
-          branches=("v1.8.3main" "v1.8.2old" "v1.8.4neon")
+          branches=("v1.8.5main")
 
           for branch in "${branches[@]}"; do
             echo "Processing branch: $branch"
