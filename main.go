@@ -81,6 +81,22 @@ type Offset struct {
 	M_totalHitsOnServer    uintptr `json:"m_totalHitsOnServer"`
 }
 
+// Config Yapısı (Ayarları diske kaydetmek için)
+type Config struct {
+	TeamCheck           bool `json:"teamCheck"`
+	HeadCircle          bool `json:"headCircle"`
+	SkeletonRendering   bool `json:"skeletonRendering"`
+	BoxRendering        bool `json:"boxRendering"`
+	NameRendering       bool `json:"nameRendering"`
+	HealthBarRendering  bool `json:"healthBarRendering"`
+	ArmorBarRendering   bool `json:"armorBarRendering"`
+	HealthTextRendering bool `json:"healthTextRendering"`
+	DistanceRendering   bool `json:"distanceRendering"`
+	HitmarkerRendering  bool `json:"hitmarkerRendering"`
+	HitSoundRendering   bool `json:"hitSoundRendering"`
+	SkeletonColorIndex  int  `json:"skeletonColorIndex"`
+}
+
 var (
 	user32                     = windows.NewLazySystemDLL("user32.dll")
 	gdi32                      = windows.NewLazySystemDLL("gdi32.dll")
@@ -161,6 +177,61 @@ func init() {
 	runtime.LockOSThread()
 	rand.Seed(time.Now().UnixNano())
 	cachedHitPath = extractEmbeddedHitSound()
+	loadConfig() // Program başlarken config dosyasını yükle
+}
+
+func getConfigPath() string {
+	exeDir, err := os.Executable()
+	if err != nil {
+		return "config.json"
+	}
+	return filepath.Join(filepath.Dir(exeDir), "config.json")
+}
+
+func saveConfig() {
+	cfg := Config{
+		TeamCheck:           teamCheck,
+		HeadCircle:          headCircle,
+		SkeletonRendering:   skeletonRendering,
+		BoxRendering:        boxRendering,
+		NameRendering:       nameRendering,
+		HealthBarRendering:  healthBarRendering,
+		ArmorBarRendering:   armorBarRendering,
+		HealthTextRendering: healthTextRendering,
+		DistanceRendering:   distanceRendering,
+		HitmarkerRendering:  hitmarkerRendering,
+		HitSoundRendering:   hitSoundRendering,
+		SkeletonColorIndex:  skeletonColorIndex,
+	}
+
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err == nil {
+		_ = os.WriteFile(getConfigPath(), data, 0644)
+	}
+}
+
+func loadConfig() {
+	filePath := getConfigPath()
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return // Dosya yoksa varsayılan ayarlarla devam et
+	}
+
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err == nil {
+		teamCheck = cfg.TeamCheck
+		headCircle = cfg.HeadCircle
+		skeletonRendering = cfg.SkeletonRendering
+		boxRendering = cfg.BoxRendering
+		nameRendering = cfg.NameRendering
+		healthBarRendering = cfg.HealthBarRendering
+		armorBarRendering = cfg.ArmorBarRendering
+		healthTextRendering = cfg.HealthTextRendering
+		distanceRendering = cfg.DistanceRendering
+		hitmarkerRendering = cfg.HitmarkerRendering
+		hitSoundRendering = cfg.HitSoundRendering
+		skeletonColorIndex = cfg.SkeletonColorIndex
+	}
 }
 
 func extractEmbeddedHitSound() string {
@@ -693,7 +764,7 @@ func drawInGameMenu(hdc win.HDC) {
 	selectObject.Call(uintptr(hdc), menuBrush)
 	selectObject.Call(uintptr(hdc), menuBorderPen)
 
-	rectangleProc.Call(uintptr(hdc), 30, 30, 350, 390)
+	rectangleProc.Call(uintptr(hdc), 30, 30, 350, 415) // Menü yüksekliği yeni özellik için uzatıldı
 
 	deleteObject.Call(menuBrush)
 	deleteObject.Call(menuBorderPen)
@@ -721,6 +792,7 @@ func drawInGameMenu(hdc win.HDC) {
 		{"[F8] Skeleton Color", "[" + currentColor + "]", true},
 		{"[F9] Armor Bar", getStatusText(armorBarRendering), armorBarRendering},
 		{"[F10] Hitmarker & Sound", getStatusText(hitmarkerRendering), hitmarkerRendering},
+		{"[F11] Config Kaydet", "[ K AYDET ]", true},
 	}
 
 	startY := int32(75)
@@ -729,7 +801,9 @@ func drawInGameMenu(hdc win.HDC) {
 		labelPtr, _ := windows.UTF16PtrFromString(item.label)
 		textOutProc.Call(uintptr(hdc), 45, uintptr(startY), uintptr(unsafe.Pointer(labelPtr)), uintptr(len(item.label)))
 
-		if item.active && (item.status == "[ AÇIK ]" || item.status == "[ MAVİ ]" || item.status == "[ YEŞİL ]" || item.status == "[ KIRMIZI ]") {
+		if item.label == "[F11] Config Kaydet" {
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 200, 255)))
+		} else if item.active && (item.status == "[ AÇIK ]" || item.status == "[ MAVİ ]" || item.status == "[ YEŞİL ]" || item.status == "[ KIRMIZI ]") {
 			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 255, 100)))
 		} else if item.status == "[ KAPALI ]" {
 			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 60, 60)))
@@ -896,6 +970,10 @@ func listenHotkeys() {
 			hitSoundRendering = hitmarkerRendering
 			playBeep(hitmarkerRendering)
 		}
+		if isKeyPressed(0x7A) { // F11 -> Config Kaydet
+			saveConfig()
+			playBeep(true)
+		}
 		if isKeyPressed(0x23) { // END
 			playBeep(false)
 			os.Exit(0)
@@ -907,6 +985,17 @@ func listenHotkeys() {
 
 func main() {
 	go listenHotkeys()
+
+	// Kaydedilen iskelet rengini başlangıçta ayarla
+	if skeletonColorIndex == 0 {
+		skeletonColor = blueBonePen
+	} else if skeletonColorIndex == 1 {
+		skeletonColor = greenBonePen
+	} else if skeletonColorIndex == 2 {
+		skeletonColor = redBonePen
+	} else {
+		skeletonColor = blueBonePen
+	}
 
 	screenWidth, _, _ := getSystemMetrics.Call(0)
 	screenHeight, _, _ := getSystemMetrics.Call(1)
@@ -989,8 +1078,6 @@ func main() {
 	hitmarkerPen, _, _ = createPen.Call(win.PS_SOLID, 2, 0xffffff)
 	if hitmarkerPen == 0 { return }
 	defer deleteObject.Call(hitmarkerPen)
-
-	skeletonColor = blueBonePen
 
 	font, _, _ := createFont.Call(14, 0, 0, 0, win.FW_BOLD, 0, 0, 0, win.DEFAULT_CHARSET, win.OUT_DEFAULT_PRECIS, win.CLIP_DEFAULT_PRECIS, win.DEFAULT_QUALITY, win.DEFAULT_PITCH|win.FF_DONTCARE, 0)
 
