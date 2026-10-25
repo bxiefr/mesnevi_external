@@ -113,19 +113,20 @@ const (
 )
 
 var (
-	teamCheck           bool   = true
-	headCircle          bool   = true
-	skeletonRendering   bool   = true
-	boxRendering        bool   = true
-	nameRendering       bool   = true
-	healthBarRendering  bool   = true
-	armorBarRendering   bool   = true
-	healthTextRendering bool   = true
-	distanceRendering   bool   = true
-	hitmarkerRendering  bool   = true
-	hitSoundRendering   bool   = true
-	menuOpen            bool   = true
-	frameDelay          uint32 = 15
+	teamCheck           bool    = true
+	headCircle          bool    = true
+	skeletonRendering   bool    = true
+	boxRendering        bool    = true
+	nameRendering       bool    = true
+	healthBarRendering  bool    = true
+	armorBarRendering   bool    = true
+	healthTextRendering bool    = true
+	distanceRendering   bool    = true
+	hitmarkerRendering  bool    = true
+	hitSoundRendering   bool    = true
+	menuOpen            bool    = true
+	frameDelay          uint32  = 15
+	currentHue          float64 = 0
 
 	lastHits      int32 = -1
 	lastHitTime   time.Time
@@ -177,6 +178,28 @@ func generateRandomString(length int) string {
 		b[i] = charset[rand.Intn(len(charset))]
 	}
 	return string(b)
+}
+
+func hsvToRGB(h, s, v float64) (byte, byte, byte) {
+	c := v * s
+	x := c * (1 - math.Abs(math.Mod(h/60.0, 2)-1))
+	m := v - c
+	var r1, g1, b1 float64
+	switch {
+	case 0 <= h && h < 60:
+		r1, g1, b1 = c, x, 0
+	case 60 <= h && h < 120:
+		r1, g1, b1 = x, c, 0
+	case 120 <= h && h < 180:
+		r1, g1, b1 = 0, c, x
+	case 180 <= h && h < 240:
+		r1, g1, b1 = 0, x, c
+	case 240 <= h && h < 300:
+		r1, g1, b1 = x, 0, c
+	default:
+		r1, g1, b1 = c, 0, x
+	}
+	return byte((r1 + m) * 255), byte((g1 + m) * 255), byte((b1 + m) * 255)
 }
 
 func playBeep(enabled bool) {
@@ -552,7 +575,6 @@ func createDynamicHealthPen(hp int32) uintptr {
 }
 
 func renderEntityInfo(hdc win.HDC, tPen uintptr, gPen uintptr, oPen uintptr, hPen uintptr, aPen uintptr, rect Rectangle, hp int32, armor int32, name string, headPos Vector3, distance float32) {
-	// Yazıların arka planını tamamen şeffaf (TRANSPARENT) yapıyoruz
 	setBkMode.Call(uintptr(hdc), 1)
 
 	if boxRendering {
@@ -662,7 +684,12 @@ func drawInGameMenu(hdc win.HDC) {
 	setBkMode.Call(uintptr(hdc), 1)
 
 	menuBrush, _, _ := createSolidBrush.Call(uintptr(0x12141a))
-	menuBorderPen, _, _ := createPen.Call(win.PS_SOLID, 1, 0x3b82f6)
+	
+	// RGB Renk Hesaplama (Dönen Neon Çerçeve İçin)
+	r, g, b := hsvToRGB(currentHue, 1.0, 1.0)
+	rgbColorRef := uintptr(r) | (uintptr(g) << 8) | (uintptr(b) << 16)
+	
+	menuBorderPen, _, _ := createPen.Call(win.PS_SOLID, 2, rgbColorRef)
 	
 	selectObject.Call(uintptr(hdc), menuBrush)
 	selectObject.Call(uintptr(hdc), menuBorderPen)
@@ -958,6 +985,8 @@ func main() {
 
 	armorPen, _, _ = createPen.Call(win.PS_SOLID, 2, 0xffcc00)
 	if armorPen == 0 { return }
+	defer deleteNamePen := armorPen // placeholder
+	_ = deleteNamePen
 	defer deleteObject.Call(armorPen)
 
 	hitmarkerPen, _, _ = createPen.Call(win.PS_SOLID, 2, 0xffffff)
@@ -977,6 +1006,9 @@ func main() {
 		win.DispatchMessage(&msg)
 
 		win.SetTimer(hwnd, 1, frameDelay, 0)
+
+		// Her karede RGB renk tonunu ileri sarıyoruz (dönen RGB efekti)
+		currentHue = math.Mod(currentHue+4.0, 360)
 
 		memhdc, _, _ := createCompatibleDC.Call(uintptr(hdc))
 		memBitmap := win.CreateCompatibleBitmap(hdc, int32(screenWidth), int32(screenHeight))
