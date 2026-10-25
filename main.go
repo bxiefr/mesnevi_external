@@ -685,7 +685,6 @@ func drawInGameMenu(hdc win.HDC) {
 
 	menuBrush, _, _ := createSolidBrush.Call(uintptr(0x12141a))
 	
-	// RGB Renk Hesaplama (Dönen Neon Çerçeve İçin)
 	r, g, b := hsvToRGB(currentHue, 1.0, 1.0)
 	rgbColorRef := uintptr(r) | (uintptr(g) << 8) | (uintptr(b) << 16)
 	
@@ -985,8 +984,6 @@ func main() {
 
 	armorPen, _, _ = createPen.Call(win.PS_SOLID, 2, 0xffcc00)
 	if armorPen == 0 { return }
-	defer deleteNamePen := armorPen // placeholder
-	_ = deleteNamePen
 	defer deleteObject.Call(armorPen)
 
 	hitmarkerPen, _, _ = createPen.Call(win.PS_SOLID, 2, 0xffffff)
@@ -1007,7 +1004,6 @@ func main() {
 
 		win.SetTimer(hwnd, 1, frameDelay, 0)
 
-		// Her karede RGB renk tonunu ileri sarıyoruz (dönen RGB efekti)
 		currentHue = math.Mod(currentHue+4.0, 360)
 
 		memhdc, _, _ := createCompatibleDC.Call(uintptr(hdc))
