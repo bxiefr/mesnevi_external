@@ -287,8 +287,9 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		entityHeadBottom Vector3
 	)
 
-	err = read(procHandle, localPlayerP+offsets.DwLocalPlayerPawn, &localPlayerP)
-	if err != nil {
+	// DÜZELTME: Doğrudan clientDll + DwLocalPlayerPawn adresinden yerel oyuncu pointer'ını çekiyoruz
+	err = read(procHandle, clientDll+offsets.DwLocalPlayerPawn, &localPlayerP)
+	if err != nil || localPlayerP == 0 {
 		return entities
 	}
 
