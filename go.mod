@@ -1,6 +1,6 @@
 module mesnevi
 
-go 1.23
+go 1.27.3
 
 require (
 	github.com/lxn/win v0.0.0-20210218163916-a377121e959e
