@@ -96,6 +96,12 @@ var (
 	createCompatibleDC         = gdi32.NewProc("CreateCompatibleDC")
 	createSolidBrush           = gdi32.NewProc("CreateSolidBrush")
 	createPen                  = gdi32.NewProc("CreatePen")
+	selectObject               = gdi32.NewProc("SelectObject")
+	deleteObject               = gdi32.NewProc("DeleteObject")
+	rectangleProc              = gdi32.NewProc("Rectangle")
+	textOutProc                = gdi32.NewProc("TextOutW")
+	setBkMode                  = gdi32.NewProc("SetBkMode")
+	setTextColor               = gdi32.NewProc("SetTextColor")
 	GetAsyncKeyState           = user32.NewProc("GetAsyncKeyState")
 	beepProc                   = kernel32.NewProc("Beep")
 	playSoundProc              = winmm.NewProc("PlaySoundW")
@@ -119,6 +125,7 @@ var (
 	distanceRendering   bool    = true
 	hitmarkerRendering  bool    = true
 	hitSoundRendering   bool    = true
+	menuOpen            bool    = true // INSERT ile açılıp kapanan GUI menü durumu
 	frameDelay          uint32  = 15
 	currentHue          float64 = 0
 
@@ -549,7 +556,7 @@ func drawHitmarker(hdc win.HDC, pen uintptr, screenWidth, screenHeight uintptr) 
 
 	win.MoveToEx(hdc, int(centerX+size), int(centerY-size), nil)
 	win.LineTo(hdc, int32(centerX+gap), int32(centerY-gap))
-	win.MoveToEx(hdc, int(centerX-gap), int(centerY+gap), nil)
+	win.MoveToEx(hdc, int(centerX-gap), int32(centerY+gap), nil)
 	win.LineTo(hdc, int32(centerX-size), int32(centerY+size))
 }
 
@@ -668,6 +675,88 @@ func renderEntityInfo(hdc win.HDC, tPen uintptr, gPen uintptr, oPen uintptr, hPe
 	}
 }
 
+// Oyuniçi Şeffaf GUI Menüyü Çizen Fonksiyon
+func drawInGameMenu(hdc win.HDC) {
+	if !menuOpen {
+		return
+	}
+
+	// Menü Arka Plan Kutusu (Şeffaf Siyah Kutu)
+	menuBrush, _, _ := createSolidBrush.Call(uintptr(0x12141a))
+	menuBorderPen, _, _ := createPen.Call(win.PS_SOLID, 1, 0x3b82f6)
+	
+	selectObject.Call(uintptr(hdc), menuBrush)
+	selectObject.Call(uintptr(hdc), menuBorderPen)
+
+	// Sol üst köşe koordinatları: X: 30, Y: 30, Genişlik: 320, Yükseklik: 360
+	rectangleProc.Call(uintptr(hdc), 30, 30, 350, 390)
+
+	deleteObject.Call(menuBrush)
+	deleteObject.Call(menuBorderPen)
+
+	// Menü Başlığı
+	setBkMode.Call(uintptr(hdc), 1) // Transparent background for text
+	setTextColor.Call(uintptr(hdc), win.RGB(255, 255, 255))
+	
+	titleStr, _ := windows.UTF16PtrFromString("--- MESNEVI EXTERNAL GUI ---")
+	textOutProc.Call(uintptr(hdc), 50, 45, uintptr(unsafe.Pointer(titleStr)), uintptr(len("--- MESNEVI EXTERNAL GUI ---")))
+
+	// Menü İçerikleri ve Durumları Hazırlama
+	colorNames := []string{"MAVİ", "YEŞİL", "KIRMIZI"}
+	currentColor := colorNames[skeletonColorIndex]
+
+	items := []struct {
+		label  string
+		status string
+		active bool
+	}{
+		{"[F1] Box ESP", getStatusText(boxRendering), boxRendering},
+		{"[F2] Skeleton ESP", getStatusText(skeletonRendering), skeletonRendering},
+		{"[F3] Head Circle", getStatusText(headCircle), headCircle},
+		{"[F4] Team Check", getStatusText(teamCheck), teamCheck},
+		{"[F5] Health Bar", getStatusText(healthBarRendering), healthBarRendering},
+		{"[F6] Player Name", getStatusText(nameRendering), nameRendering},
+		{"[F7] Distance Display", getStatusText(distanceRendering), distanceRendering},
+		{"[F8] Skeleton Color", "[" + currentColor + "]", true},
+		{"[F9] Armor Bar", getStatusText(armorBarRendering), armorBarRendering},
+		{"[F10] Hitmarker & Sound", getStatusText(hitmarkerRendering), hitmarkerRendering},
+	}
+
+	startY := int32(75)
+	for _, item := range items {
+		// Sol Etiket (Örn: [F1] Box ESP)
+		setTextColor.Call(uintptr(hdc), win.RGB(200, 200, 200))
+		labelPtr, _ := windows.UTF16PtrFromString(item.label)
+		textOutProc.Call(uintptr(hdc), 45, uintptr(startY), uintptr(unsafe.Pointer(labelPtr)), uintptr(len(item.label)))
+
+		// Sağ Durum (AÇIK / KAPALI / RENK)
+		if item.active && (item.status == "[ AÇIK ]" || item.status == "[ MAVİ ]" || item.status == "[ YEŞİL ]" || item.status == "[ KIRMIZI ]") {
+			setTextColor.Call(uintptr(hdc), win.RGB(0, 255, 100)) // Yeşil
+		} else if item.status == "[ KAPALI ]" {
+			setTextColor.Call(uintptr(hdc), win.RGB(255, 60, 60)) // Kırmızı
+		} else {
+			setTextColor.Call(uintptr(hdc), win.RGB(255, 200, 0)) // Sarı (Renkler için)
+		}
+
+		statusPtr, _ := windows.UTF16PtrFromString(item.status)
+		textOutProc.Call(uintptr(hdc), 230, uintptr(startY), uintptr(unsafe.Pointer(statusPtr)), uintptr(len(item.status)))
+
+		startY += 26
+	}
+
+	// Alt Bilgi (INSERT Gizleme Bilgisi)
+	setTextColor.Call(uintptr(hdc), win.RGB(150, 150, 150))
+	footerStr, _ := windows.UTF16PtrFromString("[INSERT] Menuyu Gizle/Goster")
+	textOutProc.Call(uintptr(hdc), 50, uintptr(startY+10), uintptr(unsafe.Pointer(footerStr)), uintptr(len("[INSERT] Menuyu Gizle/Goster")))
+}
+
+func getStatusText(status bool) string {
+	if status {
+		return "[ AÇIK ]"
+	}
+	return "[ KAPALI ]"
+}
+
 func windowProc(hwnd win.HWND, msg uint32, wParam, lParam uintptr) uintptr {
 	switch msg {
 	case win.WM_TIMER:
@@ -742,70 +831,13 @@ func initWindow(screenWidth uintptr, screenHeight uintptr) win.HWND {
 	style |= win.WS_EX_TRANSPARENT
 	win.SetWindowLongPtr(hwnd, win.GWL_EXSTYLE, style)
 
+	// Stream-proof (Ekran kaydında / OBS'de / Yayında kesinlikle gözükmeme koruması)
 	const WDA_EXCLUDEFROMCAPTURE = 0x00000011
 	setWindowDisplayAffinity.Call(uintptr(hwnd), uintptr(WDA_EXCLUDEFROMCAPTURE))
 
 	showCursor.Call(0)
 	win.ShowWindow(hwnd, win.SW_SHOWDEFAULT)
 	return hwnd
-}
-
-func printStatus(label string, status bool) {
-	if status {
-		// Tüm etiketler tam 9 karakter genişliğinde (soldan sağdan boşluklarla hizalı)
-		fmt.Printf("  %-25s %s\n", label, chalk.Green.Color("[  AÇIK   ]"))
-	} else {
-		fmt.Printf("  %-25s %s\n", label, chalk.Red.Color("[ KAPALI  ]"))
-	}
-}
-
-func renderUI() {
-	fmt.Print("\033[H")
-
-	lines := strings.Split(asciiArt, "\n")
-	for i, line := range lines {
-		if line == "" {
-			continue
-		}
-		lineHue := math.Mod(currentHue+float64(i*25), 360)
-		r, g, b := hsvToRGB(lineHue, 1.0, 1.0)
-		fmt.Printf("\x1b[38;2;%d;%d;%dm%s\x1b[0m\n", r, g, b, line)
-	}
-
-	fmt.Println(chalk.Yellow.Color("        by bxiefr - v1.8.4neon\n"))
-	fmt.Println(chalk.Cyan.Color("=========================================="))
-	fmt.Println(chalk.White.Color("          KISAYOL TUŞLARI (HOTKEYS)"))
-	fmt.Println(chalk.Cyan.Color("=========================================="))
-
-	printStatus("[F1] Box ESP", boxRendering)
-	printStatus("[F2] Skeleton ESP", skeletonRendering)
-	printStatus("[F3] Head Circle", headCircle)
-	printStatus("[F4] Team Check", teamCheck)
-	printStatus("[F5] Health Bar", healthBarRendering)
-	printStatus("[F6] Player Name", nameRendering)
-	printStatus("[F7] Distance Display", distanceRendering)
-
-    colorNames := []string{"  MAVİ   ", "  YEŞİL  ", " KIRMIZI "}
-    currentColor := colorNames[skeletonColorIndex]
-	
-    formattedColor := fmt.Sprintf("[%s]", currentColor)
-
-    fmt.Printf("  %-25s %s\n", "[F8] Skeleton Color", chalk.Yellow.Color(formattedColor))
-	
-	printStatus("[F9] Armor Bar", armorBarRendering)
-	printStatus("[F10] Hitmarker & Sound", hitmarkerRendering)
-
-	fmt.Println(chalk.Cyan.Color("------------------------------------------"))
-	fmt.Println(chalk.Red.Color("  [END] Hileyi Kapat / Close Cheat"))
-	fmt.Println(chalk.Cyan.Color("=========================================="))
-}
-
-func startRGBUI() {
-	for {
-		currentHue = math.Mod(currentHue+3.0, 360)
-		renderUI()
-		time.Sleep(40 * time.Millisecond)
-	}
 }
 
 func isKeyPressed(vKey int) bool {
@@ -815,6 +847,11 @@ func isKeyPressed(vKey int) bool {
 
 func listenHotkeys() {
 	for {
+		// INSERT Tuşu (Menüyü Aç/Kapat)
+		if isKeyPressed(0x2D) { // VK_INSERT
+			menuOpen = !menuOpen
+			playBeep(menuOpen)
+		}
 		if isKeyPressed(0x77) { // F8
 			skeletonColorIndex = (skeletonColorIndex + 1) % 3
 			if skeletonColorIndex == 0 {
@@ -873,8 +910,6 @@ func listenHotkeys() {
 }
 
 func main() {
-	fmt.Print("\033[H\033[2J")
-	go startRGBUI()
 	go listenHotkeys()
 
 	screenWidth, _, _ := getSystemMetrics.Call(0)
@@ -917,51 +952,51 @@ func main() {
 		logAndSleep("Error creating brush", errCreate)
 		return
 	}
-	defer win.DeleteObject(win.HGDIOBJ(bgBrush))
+	defer deleteObject.Call(bgBrush)
 
 	redPen, _, _ = createPen.Call(win.PS_SOLID, 1, 0x7a78ff)
 	if redPen == 0 { return }
-	defer win.DeleteObject(win.HGDIOBJ(redPen))
+	defer deleteObject.Call(redPen)
 
 	greenPen, _, _ = createPen.Call(win.PS_SOLID, 1, 0x7dff78)
 	if greenPen == 0 { return }
-	defer win.DeleteObject(win.HGDIOBJ(greenPen))
+	defer deleteObject.Call(greenPen)
 
 	bluePen, _, _ = createPen.Call(win.PS_SOLID, 1, 0xff8e78)
 	if bluePen == 0 { return }
-	defer win.DeleteObject(win.HGDIOBJ(bluePen))
+	defer deleteObject.Call(bluePen)
 
 	bonePen, _, _ = createPen.Call(win.PS_SOLID, 1, 0xffffff)
 	if bonePen == 0 { return }
-	defer win.DeleteObject(win.HGDIOBJ(bonePen))
+	defer deleteObject.Call(bonePen)
 
 	blueBonePen, _, _ = createPen.Call(win.PS_SOLID, 1, 0xff8e78)
 	if blueBonePen == 0 { return }
-	defer win.DeleteObject(win.HGDIOBJ(blueBonePen))
+	defer deleteObject.Call(blueBonePen)
 
 	greenBonePen, _, _ = createPen.Call(win.PS_SOLID, 1, 0x7dff78)
 	if greenBonePen == 0 { return }
-	defer win.DeleteObject(win.HGDIOBJ(greenBonePen))
+	defer deleteObject.Call(greenBonePen)
 
 	redBonePen, _, _ = createPen.Call(win.PS_SOLID, 1, 0x7a78ff)
 	if redBonePen == 0 { return }
-	defer win.DeleteObject(win.HGDIOBJ(redBonePen))
+	defer deleteObject.Call(redBonePen)
 
 	outlinePen, _, _ = createPen.Call(win.PS_SOLID, 1, 0x000000)
 	if outlinePen == 0 { return }
-	defer win.DeleteObject(win.HGDIOBJ(outlinePen))
+	defer deleteObject.Call(outlinePen)
 
 	armorPen, _, _ = createPen.Call(win.PS_SOLID, 2, 0xffcc00)
 	if armorPen == 0 { return }
-	defer win.DeleteObject(win.HGDIOBJ(armorPen))
+	defer deleteObject.Call(armorPen)
 
 	hitmarkerPen, _, _ = createPen.Call(win.PS_SOLID, 2, 0xffffff)
 	if hitmarkerPen == 0 { return }
-	defer win.DeleteObject(win.HGDIOBJ(hitmarkerPen))
+	defer deleteObject.Call(hitmarkerPen)
 
 	skeletonColor = blueBonePen
 
-	font, _, _ := createFont.Call(12, 0, 0, 0, win.FW_HEAVY, 0, 0, 0, win.DEFAULT_CHARSET, win.OUT_DEFAULT_PRECIS, win.CLIP_DEFAULT_PRECIS, win.DEFAULT_QUALITY, win.DEFAULT_PITCH|win.FF_DONTCARE, 0)
+	font, _, _ := createFont.Call(14, 0, 0, 0, win.FW_BOLD, 0, 0, 0, win.DEFAULT_CHARSET, win.OUT_DEFAULT_PRECIS, win.CLIP_DEFAULT_PRECIS, win.DEFAULT_QUALITY, win.DEFAULT_PITCH|win.FF_DONTCARE, 0)
 
 	offsets := getOffsets()
 
@@ -975,10 +1010,9 @@ func main() {
 
 		memhdc, _, _ := createCompatibleDC.Call(uintptr(hdc))
 		memBitmap := win.CreateCompatibleBitmap(hdc, int32(screenWidth), int32(screenHeight))
-		win.SelectObject(win.HDC(memhdc), win.HGDIOBJ(memBitmap))
-		win.SelectObject(win.HDC(memhdc), win.HGDIOBJ(bgBrush))
-		win.SetBkMode(win.HDC(memhdc), win.TRANSPARENT)
-		win.SelectObject(win.HDC(memhdc), win.HGDIOBJ(font))
+		selectObject.Call(uintptr(memhdc), uintptr(memBitmap))
+		selectObject.Call(uintptr(memhdc), bgBrush)
+		selectObject.Call(uintptr(memhdc), font)
 
 		entities := getEntitiesInfo(procHandle, clientDll, screenWidth, screenHeight, offsets)
 		for _, entity := range entities {
@@ -999,9 +1033,12 @@ func main() {
 			drawHitmarker(win.HDC(memhdc), hitmarkerPen, screenWidth, screenHeight)
 		}
 
+		// Oyuniçi Grafiksel Menüyü Çiz
+		drawInGameMenu(win.HDC(memhdc))
+
 		win.BitBlt(hdc, 0, 0, int32(screenWidth), int32(screenHeight), win.HDC(memhdc), 0, 0, win.SRCCOPY)
 
-		win.DeleteObject(win.HGDIOBJ(memBitmap))
-		win.DeleteDC(win.HDC(memhdc))
+		deleteObject.Call(uintptr(memBitmap))
+		deleteObject.Call(memhdc)
 	}
 }
