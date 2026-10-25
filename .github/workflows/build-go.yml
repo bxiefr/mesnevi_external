@@ -1,4 +1,4 @@
-name: Build All Branches CLI
+name: Build All Branches
 
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target_branch: ["v1.8.2old", "v1.8.3main", "v1.8.4neon", "v1.8.5neon"]
+        target_branch: ["v1.8.5main"]
 
     steps:
     - name: Checkout Target Branch (${{ matrix.target_branch }})
@@ -56,7 +56,7 @@ jobs:
         name: Build ${{ env.DATETIME }} (${{ matrix.target_branch }})
         body: |
           ### Build Details
-          - **Build Time (UTC+3):** ${{ env.DATETIME }}
+          - **Build Time:** ${{ env.DATETIME }}
           - **Source Branch:** `${{ matrix.target_branch }}`
           - **Status:** Automated CLI Build
         files: |
