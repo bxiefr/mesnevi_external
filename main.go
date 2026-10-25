@@ -17,7 +17,6 @@ import (
 	"unsafe"
 
 	"github.com/lxn/win"
-	"github.com/ttacon/chalk"
 	"golang.org/x/sys/windows"
 )
 
@@ -114,20 +113,19 @@ const (
 )
 
 var (
-	teamCheck           bool    = true
-	headCircle          bool    = true
-	skeletonRendering   bool    = true
-	boxRendering        bool    = true
-	nameRendering       bool    = true
-	healthBarRendering  bool    = true
-	armorBarRendering   bool    = true
-	healthTextRendering bool    = true
-	distanceRendering   bool    = true
-	hitmarkerRendering  bool    = true
-	hitSoundRendering   bool    = true
-	menuOpen            bool    = true // INSERT ile açılıp kapanan GUI menü durumu
-	frameDelay          uint32  = 15
-	currentHue          float64 = 0
+	teamCheck           bool   = true
+	headCircle          bool   = true
+	skeletonRendering   bool   = true
+	boxRendering        bool   = true
+	nameRendering       bool   = true
+	healthBarRendering  bool   = true
+	armorBarRendering   bool   = true
+	healthTextRendering bool   = true
+	distanceRendering   bool   = true
+	hitmarkerRendering  bool   = true
+	hitSoundRendering   bool   = true
+	menuOpen            bool   = true
+	frameDelay          uint32 = 15
 
 	lastHits      int32 = -1
 	lastHitTime   time.Time
@@ -170,37 +168,6 @@ func extractEmbeddedHitSound() string {
 		_ = os.WriteFile(tmpPath, embeddedHitSound, 0644)
 	}
 	return tmpPath
-}
-
-func hsvToRGB(h, s, v float64) (byte, byte, byte) {
-	c := v * s
-	x := c * (1 - math.Abs(math.Mod(h/60.0, 2)-1))
-	m := v - c
-	var r1, g1, b1 float64
-	switch {
-	case 0 <= h && h < 60:
-		r1, g1, b1 = c, x, 0
-	case 60 <= h && h < 120:
-		r1, g1, b1 = x, c, 0
-	case 120 <= h && h < 180:
-		r1, g1, b1 = 0, c, x
-	case 180 <= h && h < 240:
-		r1, g1, b1 = 0, x, c
-	case 240 <= h && h < 300:
-		r1, g1, b1 = x, 0, c
-	default:
-		r1, g1, b1 = c, 0, x
-	}
-	return byte((r1 + m) * 255), byte((g1 + m) * 255), byte((b1 + m) * 255)
-}
-
-func generateRandomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = charset[rand.Intn(len(charset))]
-	}
-	return string(b)
 }
 
 func playBeep(enabled bool) {
@@ -542,21 +509,21 @@ func drawSkeleton(hdc win.HDC, pen uintptr, bones map[string]Vector2) {
 }
 
 func drawHitmarker(hdc win.HDC, pen uintptr, screenWidth, screenHeight uintptr) {
-	centerX := int32(screenWidth / 2)
-	centerY := int32(screenHeight / 2)
-	size := int32(8)
-	gap := int32(4)
+	centerX := int(screenWidth / 2)
+	centerY := int(screenHeight / 2)
+	size := 8
+	gap := 4
 
 	win.SelectObject(hdc, win.HGDIOBJ(pen))
 
-	win.MoveToEx(hdc, int(centerX-size), int(centerY-size), nil)
+	win.MoveToEx(hdc, centerX-size, centerY-size, nil)
 	win.LineTo(hdc, int32(centerX-gap), int32(centerY-gap))
-	win.MoveToEx(hdc, int(centerX+gap), int(centerY+gap), nil)
+	win.MoveToEx(hdc, centerX+gap, centerY+gap, nil)
 	win.LineTo(hdc, int32(centerX+size), int32(centerY+size))
 
-	win.MoveToEx(hdc, int(centerX+size), int(centerY-size), nil)
+	win.MoveToEx(hdc, centerX+size, centerY-size, nil)
 	win.LineTo(hdc, int32(centerX+gap), int32(centerY-gap))
-	win.MoveToEx(hdc, int(centerX-gap), int32(centerY+gap), nil)
+	win.MoveToEx(hdc, centerX-gap, centerY+gap, nil)
 	win.LineTo(hdc, int32(centerX-size), int32(centerY+size))
 }
 
@@ -681,27 +648,23 @@ func drawInGameMenu(hdc win.HDC) {
 		return
 	}
 
-	// Menü Arka Plan Kutusu (Şeffaf Siyah Kutu)
 	menuBrush, _, _ := createSolidBrush.Call(uintptr(0x12141a))
 	menuBorderPen, _, _ := createPen.Call(win.PS_SOLID, 1, 0x3b82f6)
 	
 	selectObject.Call(uintptr(hdc), menuBrush)
 	selectObject.Call(uintptr(hdc), menuBorderPen)
 
-	// Sol üst köşe koordinatları: X: 30, Y: 30, Genişlik: 320, Yükseklik: 360
 	rectangleProc.Call(uintptr(hdc), 30, 30, 350, 390)
 
 	deleteObject.Call(menuBrush)
 	deleteObject.Call(menuBorderPen)
 
-	// Menü Başlığı
-	setBkMode.Call(uintptr(hdc), 1) // Transparent background for text
-	setTextColor.Call(uintptr(hdc), win.RGB(255, 255, 255))
+	setBkMode.Call(uintptr(hdc), 1)
+	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 255, 255)))
 	
 	titleStr, _ := windows.UTF16PtrFromString("--- MESNEVI EXTERNAL GUI ---")
 	textOutProc.Call(uintptr(hdc), 50, 45, uintptr(unsafe.Pointer(titleStr)), uintptr(len("--- MESNEVI EXTERNAL GUI ---")))
 
-	// Menü İçerikleri ve Durumları Hazırlama
 	colorNames := []string{"MAVİ", "YEŞİL", "KIRMIZI"}
 	currentColor := colorNames[skeletonColorIndex]
 
@@ -724,18 +687,16 @@ func drawInGameMenu(hdc win.HDC) {
 
 	startY := int32(75)
 	for _, item := range items {
-		// Sol Etiket (Örn: [F1] Box ESP)
-		setTextColor.Call(uintptr(hdc), win.RGB(200, 200, 200))
+		setTextColor.Call(uintptr(hdc), uintptr(win.RGB(200, 200, 200)))
 		labelPtr, _ := windows.UTF16PtrFromString(item.label)
 		textOutProc.Call(uintptr(hdc), 45, uintptr(startY), uintptr(unsafe.Pointer(labelPtr)), uintptr(len(item.label)))
 
-		// Sağ Durum (AÇIK / KAPALI / RENK)
 		if item.active && (item.status == "[ AÇIK ]" || item.status == "[ MAVİ ]" || item.status == "[ YEŞİL ]" || item.status == "[ KIRMIZI ]") {
-			setTextColor.Call(uintptr(hdc), win.RGB(0, 255, 100)) // Yeşil
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 255, 100)))
 		} else if item.status == "[ KAPALI ]" {
-			setTextColor.Call(uintptr(hdc), win.RGB(255, 60, 60)) // Kırmızı
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 60, 60)))
 		} else {
-			setTextColor.Call(uintptr(hdc), win.RGB(255, 200, 0)) // Sarı (Renkler için)
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 200, 0)))
 		}
 
 		statusPtr, _ := windows.UTF16PtrFromString(item.status)
@@ -744,8 +705,7 @@ func drawInGameMenu(hdc win.HDC) {
 		startY += 26
 	}
 
-	// Alt Bilgi (INSERT Gizleme Bilgisi)
-	setTextColor.Call(uintptr(hdc), win.RGB(150, 150, 150))
+	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(150, 150, 150)))
 	footerStr, _ := windows.UTF16PtrFromString("[INSERT] Menuyu Gizle/Goster")
 	textOutProc.Call(uintptr(hdc), 50, uintptr(startY+10), uintptr(unsafe.Pointer(footerStr)), uintptr(len("[INSERT] Menuyu Gizle/Goster")))
 }
@@ -831,7 +791,6 @@ func initWindow(screenWidth uintptr, screenHeight uintptr) win.HWND {
 	style |= win.WS_EX_TRANSPARENT
 	win.SetWindowLongPtr(hwnd, win.GWL_EXSTYLE, style)
 
-	// Stream-proof (Ekran kaydında / OBS'de / Yayında kesinlikle gözükmeme koruması)
 	const WDA_EXCLUDEFROMCAPTURE = 0x00000011
 	setWindowDisplayAffinity.Call(uintptr(hwnd), uintptr(WDA_EXCLUDEFROMCAPTURE))
 
@@ -847,7 +806,6 @@ func isKeyPressed(vKey int) bool {
 
 func listenHotkeys() {
 	for {
-		// INSERT Tuşu (Menüyü Aç/Kapat)
 		if isKeyPressed(0x2D) { // VK_INSERT
 			menuOpen = !menuOpen
 			playBeep(menuOpen)
@@ -1033,7 +991,6 @@ func main() {
 			drawHitmarker(win.HDC(memhdc), hitmarkerPen, screenWidth, screenHeight)
 		}
 
-		// Oyuniçi Grafiksel Menüyü Çiz
 		drawInGameMenu(win.HDC(memhdc))
 
 		win.BitBlt(hdc, 0, 0, int32(screenWidth), int32(screenHeight), win.HDC(memhdc), 0, 0, win.SRCCOPY)
