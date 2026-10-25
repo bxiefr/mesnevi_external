@@ -287,7 +287,6 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		entityHeadBottom Vector3
 	)
 
-	// DÜZELTME: Doğrudan clientDll + DwLocalPlayerPawn adresinden yerel oyuncu pointer'ını çekiyoruz
 	err = read(procHandle, clientDll+offsets.DwLocalPlayerPawn, &localPlayerP)
 	if err != nil || localPlayerP == 0 {
 		return entities
@@ -553,6 +552,9 @@ func createDynamicHealthPen(hp int32) uintptr {
 }
 
 func renderEntityInfo(hdc win.HDC, tPen uintptr, gPen uintptr, oPen uintptr, hPen uintptr, aPen uintptr, rect Rectangle, hp int32, armor int32, name string, headPos Vector3, distance float32) {
+	// Yazıların arka planını tamamen şeffaf (TRANSPARENT) yapıyoruz
+	setBkMode.Call(uintptr(hdc), 1)
+
 	if boxRendering {
 		win.SelectObject(hdc, win.HGDIOBJ(tPen))
 		win.MoveToEx(hdc, int(rect.Left), int(rect.Top), nil)
@@ -657,6 +659,8 @@ func drawInGameMenu(hdc win.HDC) {
 		return
 	}
 
+	setBkMode.Call(uintptr(hdc), 1)
+
 	menuBrush, _, _ := createSolidBrush.Call(uintptr(0x12141a))
 	menuBorderPen, _, _ := createPen.Call(win.PS_SOLID, 1, 0x3b82f6)
 	
@@ -668,7 +672,6 @@ func drawInGameMenu(hdc win.HDC) {
 	deleteObject.Call(menuBrush)
 	deleteObject.Call(menuBorderPen)
 
-	setBkMode.Call(uintptr(hdc), 1)
 	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 255, 255)))
 	
 	titleStr, _ := windows.UTF16PtrFromString("--- MESNEVI EXTERNAL GUI ---")
