@@ -792,7 +792,8 @@ func drawInGameMenu(hdc win.HDC) {
 		{"[F8] Skeleton Color", "[" + currentColor + "]", true},
 		{"[F9] Armor Bar", getStatusText(armorBarRendering), armorBarRendering},
 		{"[F10] Hitmarker & Sound", getStatusText(hitmarkerRendering), hitmarkerRendering},
-		{"[F11] Config Kaydet", "[ K AYDET ]", true},
+		{"[F11] Config Kaydet", "[ KAYDET ]", true},
+		{"[DELETE] Panic Button", "[ ACİL ÇIKIŞ ]", true},
 	}
 
 	startY := int32(75)
@@ -918,11 +919,11 @@ func isKeyPressed(vKey int) bool {
 
 func listenHotkeys() {
 	for {
-		if isKeyPressed(0x2D) { // VK_INSERT
+		if isKeyPressed(0x2D) { // VK_INSERT -> Menüyü Gizle/Göster
 			menuOpen = !menuOpen
 			playBeep(menuOpen)
 		}
-		if isKeyPressed(0x77) { // F8
+		if isKeyPressed(0x77) { // F8 -> İskelet Rengi Değiştir
 			skeletonColorIndex = (skeletonColorIndex + 1) % 3
 			if skeletonColorIndex == 0 {
 				skeletonColor = blueBonePen
@@ -933,39 +934,39 @@ func listenHotkeys() {
 			}
 			playBeep(true)
 		}
-		if isKeyPressed(0x70) { // F1
+		if isKeyPressed(0x70) { // F1 -> Box ESP
 			boxRendering = !boxRendering
 			playBeep(boxRendering)
 		}
-		if isKeyPressed(0x71) { // F2
+		if isKeyPressed(0x71) { // F2 -> Skeleton ESP
 			skeletonRendering = !skeletonRendering
 			playBeep(skeletonRendering)
 		}
-		if isKeyPressed(0x72) { // F3
+		if isKeyPressed(0x72) { // F3 -> Head Circle
 			headCircle = !headCircle
 			playBeep(headCircle)
 		}
-		if isKeyPressed(0x73) { // F4
+		if isKeyPressed(0x73) { // F4 -> Team Check
 			teamCheck = !teamCheck
 			playBeep(teamCheck)
 		}
-		if isKeyPressed(0x74) { // F5
+		if isKeyPressed(0x74) { // F5 -> Health Bar
 			healthBarRendering = !healthBarRendering
 			playBeep(healthBarRendering)
 		}
-		if isKeyPressed(0x75) { // F6
+		if isKeyPressed(0x75) { // F6 -> Player Name
 			nameRendering = !nameRendering
 			playBeep(nameRendering)
 		}
-		if isKeyPressed(0x76) { // F7
+		if isKeyPressed(0x76) { // F7 -> Distance Display
 			distanceRendering = !distanceRendering
 			playBeep(distanceRendering)
 		}
-		if isKeyPressed(0x78) { // F9
+		if isKeyPressed(0x78) { // F9 -> Armor Bar
 			armorBarRendering = !armorBarRendering
 			playBeep(armorBarRendering)
 		}
-		if isKeyPressed(0x79) { // F10
+		if isKeyPressed(0x79) { // F10 -> Hitmarker & Sound
 			hitmarkerRendering = !hitmarkerRendering
 			hitSoundRendering = hitmarkerRendering
 			playBeep(hitmarkerRendering)
@@ -974,7 +975,11 @@ func listenHotkeys() {
 			saveConfig()
 			playBeep(true)
 		}
-		if isKeyPressed(0x23) { // END
+		if isKeyPressed(0x2E) { // VK_DELETE -> PANIC BUTTON (Anında Kapatma)
+			playBeep(false)
+			os.Exit(0)
+		}
+		if isKeyPressed(0x23) { // END -> Normal Çıkış
 			playBeep(false)
 			os.Exit(0)
 		}
