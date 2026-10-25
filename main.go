@@ -1079,6 +1079,8 @@ func main() {
 	if hitmarkerPen == 0 { return }
 	defer deleteObject.Call(hitmarkerPen)
 
+	skeletonColor = blueBonePen
+
 	font, _, _ := createFont.Call(14, 0, 0, 0, win.FW_BOLD, 0, 0, 0, win.DEFAULT_CHARSET, win.OUT_DEFAULT_PRECIS, win.CLIP_DEFAULT_PRECIS, win.DEFAULT_QUALITY, win.DEFAULT_PITCH|win.FF_DONTCARE, 0)
 
 	offsets := getOffsets()
