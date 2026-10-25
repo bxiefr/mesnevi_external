@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target_branch: ["v1.8.3main", "v1.8.2old", "v1.8.4neon"]
+        target_branch: ["v1.8.2old", "v1.8.3main", "v1.8.4neon", "v1.8.5neon"]
 
     steps:
     - name: Checkout Target Branch (${{ matrix.target_branch }})
