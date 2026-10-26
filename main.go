@@ -467,6 +467,12 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		if entityPawn == 0 {
 			continue
 		}
+
+        isDormant := readBool(procHandle, entityPawn + offsets.M_bDormant)
+		if isDormant {
+			continue // Oyuncu ölü/uzakta, hiç kemik ve kutu okumadan direkt sonraki oyuncuya geç!
+		}
+		
 		if entityPawn == localPlayerP {
 			continue
 		}
