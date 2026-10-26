@@ -117,6 +117,7 @@ var (
 	textOutProc                = gdi32.NewProc("TextOutW")
 	setBkMode                  = gdi32.NewProc("SetBkMode")
 	setTextColor               = gdi32.NewProc("SetTextColor")
+	gdiFlush                   = gdi32.NewProc("GdiFlush")
 	GetAsyncKeyState           = user32.NewProc("GetAsyncKeyState")
 	beepProc                   = kernel32.NewProc("Beep")
 	playSoundProc              = winmm.NewProc("PlaySoundW")
@@ -1128,7 +1129,8 @@ func main() {
 		drawInGameMenu(win.HDC(memhdc))
 
 		win.BitBlt(hdc, 0, 0, int32(screenWidth), int32(screenHeight), win.HDC(memhdc), 0, 0, win.SRCCOPY)
-
+        gdiFlush.Call()
+		
 		deleteObject.Call(uintptr(memBitmap))
 		deleteObject.Call(memhdc)
 	}
