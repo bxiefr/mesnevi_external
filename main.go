@@ -569,6 +569,7 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 			boneX, boneY := worldToScreen(viewMatrix, currentBone)
 			entityBones[boneName] = Vector2{boneX, boneY}
 		}
+  }          
 		entityHeadTop = Vector3{entityHead.X, entityHead.Y, entityHead.Z + 7}
 		entityHeadBottom = Vector3{entityHead.X, entityHead.Y, entityHead.Z - 5}
 		screenPosHeadX, screenPosHeadTopY := worldToScreen(viewMatrix, entityHeadTop)
