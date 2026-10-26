@@ -102,6 +102,7 @@ var (
 	cachedScreenWidth  float32
     cachedScreenHeight float32
 	user32                     = windows.NewLazySystemDLL("user32.dll")
+	getForegroundWindow        = user32.NewProc("GetForegroundWindow")
 	gdi32                      = windows.NewLazySystemDLL("gdi32.dll")
 	kernel32                   = windows.NewLazySystemDLL("kernel32.dll")
 	setPriorityClass           = kernel32.NewProc("SetPriorityClass")
@@ -1117,6 +1118,8 @@ func main() {
 		//win.SetTimer(hwnd, 1, frameDelay, 0) # disabled for performance
 
 		currentHue = math.Mod(currentHue+4.0, 360)
+
+		hwndForeground, _, _ := getForegroundWindow.Call()
 
 		memhdc, _, _ := createCompatibleDC.Call(uintptr(hdc))
 		memBitmap := win.CreateCompatibleBitmap(hdc, int32(screenWidth), int32(screenHeight))
