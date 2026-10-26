@@ -1120,6 +1120,7 @@ func main() {
 		currentHue = math.Mod(currentHue+4.0, 360)
 
 		hwndForeground, _, _ := getForegroundWindow.Call()
+		_ = hwndForeground
 
 		memhdc, _, _ := createCompatibleDC.Call(uintptr(hdc))
 		memBitmap := win.CreateCompatibleBitmap(hdc, int32(screenWidth), int32(screenHeight))
