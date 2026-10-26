@@ -548,7 +548,13 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 			return entities
 		}
 
+		if skeletonRendering || headCircle {
 		for boneName, boneIndex := range bones {
+			// Eğer iskelet kapalı ama kafa çemberi açıkse, sadece "head" kemiğini oku, diğerlerini atla
+			if !skeletonRendering && boneName != "head" {
+				continue
+			}
+
 			err = read(procHandle, entityBoneArray+uintptr(boneIndex)*32, &currentBone)
 			if err != nil {
 				return entities
@@ -556,6 +562,7 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 			if boneName == "head" {
 				entityHead = currentBone
 				if !skeletonRendering {
+					// Sadece kafa lazımsa ve iskelet çizilmeyecekse döngüyü hemen kır
 					break
 				}
 			}
