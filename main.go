@@ -101,6 +101,7 @@ var (
 	user32                     = windows.NewLazySystemDLL("user32.dll")
 	gdi32                      = windows.NewLazySystemDLL("gdi32.dll")
 	kernel32                   = windows.NewLazySystemDLL("kernel32.dll")
+	setPriorityClass           = kernel32.NewProc("SetPriorityClass")
 	winmm                      = windows.NewLazySystemDLL("winmm.dll")
 	getSystemMetrics           = user32.NewProc("GetSystemMetrics")
 	setLayeredWindowAttributes = user32.NewProc("SetLayeredWindowAttributes")
@@ -990,6 +991,9 @@ func listenHotkeys() {
 }
 
 func main() {
+
+    setPriorityClass.Call(uintptr(windows.CurrentProcess()), 0x00008000)
+	
 	go listenHotkeys()
 
 	// Kaydedilen iskelet rengini başlangıçta ayarla
