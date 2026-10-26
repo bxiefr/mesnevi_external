@@ -15,6 +15,7 @@ import (
 	"time"
 	"unicode"
 	"unsafe"
+	"runtime/debug"
 
 	"github.com/lxn/win"
 	"golang.org/x/sys/windows"
@@ -178,6 +179,7 @@ var (
 func init() {
 	runtime.LockOSThread()
 	rand.Seed(time.Now().UnixNano())
+	debug.SetGCPercent(200)
 	cachedHitPath = extractEmbeddedHitSound()
 	loadConfig() // Program başlarken config dosyasını yükle
 }
