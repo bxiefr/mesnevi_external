@@ -467,11 +467,6 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		if entityPawn == 0 {
 			continue
 		}
-
-        isDormant := readBool(procHandle, entityPawn + offsets.M_bDormant)
-		if isDormant {
-			continue // Oyuncu ölü/uzakta, hiç kemik ve kutu okumadan direkt sonraki oyuncuya geç!
-		}
 		
 		if entityPawn == localPlayerP {
 			continue
@@ -929,6 +924,12 @@ func initWindow(screenWidth uintptr, screenHeight uintptr) win.HWND {
 	return hwnd
 }
 
+func readBool(handle windows.Handle, address uintptr) bool {
+    var value bool
+    read(handle, address, &value)
+    return value
+}
+
 func isKeyPressed(vKey int) bool {
 	ret, _, _ := GetAsyncKeyState.Call(uintptr(vKey))
 	return (ret & 0x0001) != 0
@@ -1127,6 +1128,9 @@ func main() {
 
 		hwndForeground, _, _ := getForegroundWindow.Call()
 		_ = hwndForeground
+
+		time.Sleep(time.Millisecond * 2) // 2ms uyku, akıcılığı bozmadan CPU'yu rahatlatır
+    }
 
 		memhdc, _, _ := createCompatibleDC.Call(uintptr(hdc))
 		memBitmap := win.CreateCompatibleBitmap(hdc, int32(screenWidth), int32(screenHeight))
