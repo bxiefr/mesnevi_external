@@ -1131,7 +1131,7 @@ func main() {
 
 		time.Sleep(time.Millisecond * 2) // 2ms uyku, akıcılığı bozmadan CPU'yu rahatlatır
     }
-
+}
 		memhdc, _, _ := createCompatibleDC.Call(uintptr(hdc))
 		memBitmap := win.CreateCompatibleBitmap(hdc, int32(screenWidth), int32(screenHeight))
 		selectObject.Call(uintptr(memhdc), uintptr(memBitmap))
