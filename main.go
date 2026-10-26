@@ -99,6 +99,8 @@ type Config struct {
 }
 
 var (
+	cachedScreenWidth  float32
+    cachedScreenHeight float32
 	user32                     = windows.NewLazySystemDLL("user32.dll")
 	gdi32                      = windows.NewLazySystemDLL("gdi32.dll")
 	kernel32                   = windows.NewLazySystemDLL("kernel32.dll")
@@ -310,14 +312,10 @@ func worldToScreen(viewMatrix Matrix, position Vector3) (float32, float32) {
 	invw := 1.0 / w
 	screenX *= invw
 	screenY *= invw
-	width, _, _ := getSystemMetrics.Call(0)
-	height, _, _ := getSystemMetrics.Call(1)
-	widthFloat := float32(width)
-	heightFloat := float32(height)
-	x := widthFloat / 2
-	y := heightFloat / 2
-	x += 0.5*screenX*widthFloat + 0.5
-	y -= 0.5*screenY*heightFloat + 0.5
+    x := cachedScreenWidth / 2
+	y := cachedScreenHeight / 2
+	x += 0.5 * screenX * cachedScreenWidth + 0.5
+	y -= 0.5 * screenY * cachedScreenHeight + 0.5
 	return x, y
 }
 
@@ -1012,6 +1010,9 @@ func main() {
 	screenWidth, _, _ := getSystemMetrics.Call(0)
 	screenHeight, _, _ := getSystemMetrics.Call(1)
 
+    cachedScreenWidth = float32(screenWidth)
+    cachedScreenHeight = float32(screenHeight)
+	
 	hwnd := initWindow(screenWidth, screenHeight)
 	if hwnd == 0 {
 		logAndSleep("Error creating window", fmt.Errorf("%v", win.GetLastError()))
