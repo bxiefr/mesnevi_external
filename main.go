@@ -1019,6 +1019,8 @@ func main() {
 	}
 	defer win.DestroyWindow(hwnd)
 
+	win.SetTimer(hwnd, 1, frameDelay, 0)
+
 	pid, err := findProcessId("cs2.exe")
 	if err != nil {
 		logAndSleep("Error finding process ID", err)
@@ -1103,7 +1105,7 @@ func main() {
 		win.TranslateMessage(&msg)
 		win.DispatchMessage(&msg)
 
-		win.SetTimer(hwnd, 1, frameDelay, 0)
+		//win.SetTimer(hwnd, 1, frameDelay, 0) # disabled for performance
 
 		currentHue = math.Mod(currentHue+4.0, 360)
 
