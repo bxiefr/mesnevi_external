@@ -1129,8 +1129,8 @@ func main() {
 		hwndForeground, _, _ := getForegroundWindow.Call()
 		_ = hwndForeground
 
-		time.Sleep(time.Millisecond * 2) // 2ms uyku, akıcılığı bozmadan CPU'yu rahatlatır
-        }
+        time.Sleep(time.Millisecond * 2) // 2ms uyku, akıcılığı bozmadan CPU'yu rahatlatır
+    }
 }
 
 		memhdc, _, _ := createCompatibleDC.Call(uintptr(hdc))
