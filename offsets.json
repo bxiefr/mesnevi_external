@@ -14,5 +14,6 @@
     "m_sSanitizedPlayerName": 2168,
     "m_ArmorValue": 7888,
     "m_pBulletServices": 5488,
-    "m_totalHitsOnServer": 72
+    "m_totalHitsOnServer": 72,
+    "m_Glow": 0
 }
