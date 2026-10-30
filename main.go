@@ -264,7 +264,6 @@ func hsvToRGB(h, s, v float64) (byte, byte, byte) {
 	return byte((r1 + m) * 255), byte((g1 + m) * 255), byte((b1 + m) * 255)
 }
 
-// Anlık Dinamik RGB Kalem Oluşturucu
 func getDynamicRgbPen(hueOffset float64) uintptr {
 	h := math.Mod(currentHue+hueOffset, 360)
 	r, g, b := hsvToRGB(h, 1.0, 1.0)
@@ -571,7 +570,6 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		entityBoxTop := Vector3{entityOrigin.X, entityOrigin.Y, entityOrigin.Z + 70}
 		_, screenPosBoxTop := worldToScreen(viewMatrix, entityBoxTop)
 		
-		// Uzaklık filtrelemesi (ekran dışı kalmaları engellemek için esnetildi)
 		if screenPosFeetY <= -50 || screenPosFeetY >= float32(screenHeight)+200 {
 			continue
 		}
@@ -595,10 +593,12 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 func drawSkeleton(hdc win.HDC, bones map[string]Vector2) {
 	var pen uintptr
 	if rgbEspEnabled {
-		pen = getDynamicRgbPen(30) // İskelet için hafif offsetli RGB
+		pen = getDynamicRgbPen(30)
 		defer deleteObject.Call(pen)
 	} else {
-		pen, _ = createPen.Call(win.PS_SOLID, 1, 0xffffff)
+		var errCreate error
+		pen, _, errCreate = createPen.Call(win.PS_SOLID, 1, 0xffffff)
+		_ = errCreate
 		defer deleteObject.Call(pen)
 	}
 
@@ -660,14 +660,15 @@ func createDynamicHealthPen(hp int32) uintptr {
 func renderEntityInfo(hdc win.HDC, rect Rectangle, hp int32, armor int32, name string, headPos Vector3, distance float32) {
 	setBkMode.Call(uintptr(hdc), 1)
 
-	// Box Çizimi
 	if boxRendering {
 		var boxPen uintptr
 		if rgbEspEnabled {
 			boxPen = getDynamicRgbPen(0)
 			defer deleteObject.Call(boxPen)
 		} else {
-			boxPen, _ = createPen.Call(win.PS_SOLID, 1, 0x00ff00)
+			var errCreate error
+			boxPen, _, errCreate = createPen.Call(win.PS_SOLID, 1, 0x00ff00)
+			_ = errCreate
 			defer deleteObject.Call(boxPen)
 		}
 
@@ -678,7 +679,6 @@ func renderEntityInfo(hdc win.HDC, rect Rectangle, hp int32, armor int32, name s
 		win.LineTo(hdc, int32(rect.Left), int32(rect.Bottom))
 		win.LineTo(hdc, int32(rect.Left), int32(rect.Top))
 
-		// Gölge (Outline) Çizimi
 		win.SelectObject(hdc, win.HGDIOBJ(outlinePen))
 		win.MoveToEx(hdc, int(rect.Left)-1, int(rect.Top)-1, nil)
 		win.LineTo(hdc, int32(rect.Right)-1, int32(rect.Top)+1)
@@ -687,14 +687,15 @@ func renderEntityInfo(hdc win.HDC, rect Rectangle, hp int32, armor int32, name s
 		win.LineTo(hdc, int32(rect.Left)-1, int32(rect.Top)-1)
 	}
 
-	// Kafa Çemberi
 	if headCircle {
 		var headPen uintptr
 		if rgbEspEnabled {
 			headPen = getDynamicRgbPen(180)
 			defer deleteObject.Call(headPen)
 		} else {
-			headPen, _ = createPen.Call(win.PS_SOLID, 1, 0x7a78ff)
+			var errCreate error
+			headPen, _, errCreate = createPen.Call(win.PS_SOLID, 1, 0x7a78ff)
+			_ = errCreate
 			defer deleteObject.Call(headPen)
 		}
 
@@ -705,7 +706,6 @@ func renderEntityInfo(hdc win.HDC, rect Rectangle, hp int32, armor int32, name s
 		win.Ellipse(hdc, int32(headPos.X)-radius, int32(headPos.Y), int32(headPos.X)+radius, int32(headPos.Z))
 	}
 
-	// Can Barı
 	if healthBarRendering {
 		dynamicHpPen := createDynamicHealthPen(hp)
 		win.SelectObject(hdc, win.HGDIOBJ(dynamicHpPen))
@@ -721,7 +721,6 @@ func renderEntityInfo(hdc win.HDC, rect Rectangle, hp int32, armor int32, name s
 		win.LineTo(hdc, int32(rect.Left)-5, int32(rect.Top)-1)
 	}
 
-	// Zırh Barı
 	if armorBarRendering && armor > 0 {
 		if armor > 100 {
 			armor = 100
@@ -738,7 +737,6 @@ func renderEntityInfo(hdc win.HDC, rect Rectangle, hp int32, armor int32, name s
 		win.TextOut(hdc, int32(rect.Right)+8, int32(yPos)-4, armorText, int32(len(fmt.Sprintf("%d", armor))))
 	}
 
-	// Can Yazısı
 	if healthTextRendering {
 		text, _ := windows.UTF16PtrFromString(fmt.Sprintf("%d", hp))
 		win.SetTextColor(hdc, win.RGB(byte(0), byte(255), byte(50)))
@@ -746,7 +744,6 @@ func renderEntityInfo(hdc win.HDC, rect Rectangle, hp int32, armor int32, name s
 		win.TextOut(hdc, int32(rect.Left)-8, int32(int(rect.Bottom)+1-int(float64(int(rect.Bottom)+1-int(rect.Top))*float64(hp)/100.0)), text, int32(len(fmt.Sprintf("%d", hp))))
 	}
 
-	// İsim Yazısı
 	if nameRendering {
 		text, _ := windows.UTF16PtrFromString(name)
 		win.SetTextColor(hdc, win.RGB(byte(255), byte(255), byte(255)))
@@ -754,7 +751,6 @@ func renderEntityInfo(hdc win.HDC, rect Rectangle, hp int32, armor int32, name s
 		win.TextOut(hdc, int32(rect.Left)+int32((int32(rect.Right)-int32(rect.Left))/2), int32(rect.Top)-14, text, int32(len(name)))
 	}
 
-	// Mesafe Göstergesi
 	if distanceRendering {
 		distStr := fmt.Sprintf("%.0fm", distance)
 		text, _ := windows.UTF16PtrFromString(distStr)
@@ -773,7 +769,6 @@ func drawInGameMenu(hdc win.HDC) {
 
 	menuBrush, _, _ := createSolidBrush.Call(uintptr(0x12141a))
 	
-	// Menü kenarlığı da dinamik RGB akar
 	r, g, b := hsvToRGB(currentHue, 1.0, 1.0)
 	rgbColorRef := uintptr(r) | (uintptr(g) << 8) | (uintptr(b) << 16)
 	menuBorderPen, _, _ := createPen.Call(win.PS_SOLID, 2, rgbColorRef)
@@ -1067,7 +1062,6 @@ func main() {
 		win.TranslateMessage(&msg)
 		win.DispatchMessage(&msg)
 
-		// RGB Hızı (Renklerin akış hızı)
 		currentHue = math.Mod(currentHue+3.0, 360)
 
 		memhdc, _, _ := createCompatibleDC.Call(uintptr(hdc))
@@ -1078,7 +1072,6 @@ func main() {
 
 		entities := getEntitiesInfo(procHandle, clientDll, screenWidth, screenHeight, offsets)
 		for _, entity := range entities {
-			// Uzaklık filtresi kaldırıldı/esnetildi, artık uzaktaki oyuncular kesilmeden çizilir
 			if skeletonRendering {
 				drawSkeleton(win.HDC(memhdc), entity.Bones)
 			}
