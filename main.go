@@ -305,7 +305,7 @@ func write[T any](handle windows.Handle, address uintptr, value T) error {
 	return windows.WriteProcessMemory(
 		handle,
 		address,
-		uintptr(unsafe.Pointer(&value)),
+		(*byte)(unsafe.Pointer(&value)), // <-- BURASI (*byte) olarak düzeltildi
 		unsafe.Sizeof(value),
 		&nLength,
 	)
