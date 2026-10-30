@@ -61,6 +61,7 @@ type Entity struct {
 	HeadPos  Vector3
 	Distance float32
 	Rect     Rectangle
+	Pawn     uintptr
 }
 
 type Offset struct {
@@ -80,6 +81,7 @@ type Offset struct {
 	M_ArmorValue             uintptr `json:"m_ArmorValue"`
 	M_pBulletServices        uintptr `json:"m_pBulletServices"`
 	M_totalHitsOnServer      uintptr `json:"m_totalHitsOnServer"`
+	M_Glow                   uintptr `json:"m_Glow"`
 }
 
 // Config Yapısı
@@ -96,12 +98,14 @@ type Config struct {
 	HitmarkerRendering    bool `json:"hitmarkerRendering"`
 	HitSoundRendering     bool `json:"hitSoundRendering"`
 	RgbEsp                bool `json:"rgbEsp"`
+	BodyGlow              bool `json:"bodyGlow"`
 }
 
 var (
 	cachedScreenWidth    float32
 	cachedScreenHeight   float32
 	rgbEspEnabled        bool = true
+	bodyGlowEnabled      bool = true
 	user32               = windows.NewLazySystemDLL("user32.dll")
 	getForegroundWindow  = user32.NewProc("GetForegroundWindow")
 	gdi32                = windows.NewLazySystemDLL("gdi32.dll")
@@ -193,6 +197,7 @@ func saveConfig() {
 		HitmarkerRendering:  hitmarkerRendering,
 		HitSoundRendering:   hitSoundRendering,
 		RgbEsp:              rgbEspEnabled,
+		BodyGlow:            bodyGlowEnabled,
 	}
 
 	data, err := json.MarshalIndent(cfg, "", "  ")
@@ -222,6 +227,7 @@ func loadConfig() {
 		hitmarkerRendering = cfg.HitmarkerRendering
 		hitSoundRendering = cfg.HitSoundRendering
 		rgbEspEnabled = cfg.RgbEsp
+		bodyGlowEnabled = cfg.BodyGlow
 	}
 }
 
@@ -291,6 +297,17 @@ func playHitSound() {
 func logAndSleep(message string, err error) {
 	log.Printf("%s: %v\n", message, err)
 	time.Sleep(5 * time.Second)
+}
+
+func write[T any](handle windows.Handle, address uintptr, value T) error {
+	var nLength uintptr
+	return windows.WriteProcessMemory(
+		handle,
+		address,
+		(*byte)(unsafe.Pointer(&value)),
+		unsafe.Sizeof(value),
+		&nLength,
+	)
 }
 
 func worldToScreen(viewMatrix Matrix, position Vector3) (float32, float32) {
@@ -542,6 +559,12 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 			return entities
 		}
 
+		// Body Glow / Chams Tetikleme (Eğer aktifse m_Glow offsetine yazılır)
+		if bodyGlowEnabled && offsets.M_Glow != 0 {
+			var glowVal int32 = 1
+			write(procHandle, entityPawn+offsets.M_Glow, glowVal)
+		}
+
 		if skeletonRendering || headCircle {
 			for boneName, boneIndex := range bones {
 				if !skeletonRendering && boneName != "head" {
@@ -584,6 +607,7 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		tempEntity.Bones = entityBones
 		tempEntity.HeadPos = Vector3{screenPosHeadX, screenPosHeadTopY, screenPosHeadBottomY}
 		tempEntity.Rect = Rectangle{screenPosBoxTop, screenPosFeetX - boxHeight/4, screenPosFeetX + boxHeight/4, screenPosFeetY}
+		tempEntity.Pawn = entityPawn
 
 		entities = append(entities, tempEntity)
 	}
@@ -778,7 +802,7 @@ func drawInGameMenu(hdc win.HDC) {
 	selectObject.Call(uintptr(hdc), menuBrush)
 	selectObject.Call(uintptr(hdc), menuBorderPen)
 
-	rectangleProc.Call(uintptr(hdc), 30, 30, 350, 420)
+	rectangleProc.Call(uintptr(hdc), 30, 30, 350, 450)
 
 	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 255, 255)))
 	titleStr, _ := windows.UTF16PtrFromString("--- MESNEVI MODERN ESP ---")
@@ -797,9 +821,10 @@ func drawInGameMenu(hdc win.HDC) {
 		{"[F6] Player Name", getStatusText(nameRendering), nameRendering},
 		{"[F7] Distance Display", getStatusText(distanceRendering), distanceRendering},
 		{"[F8] RGB ESP Mode", getStatusText(rgbEspEnabled), rgbEspEnabled},
-		{"[F9] Armor Bar", getStatusText(armorBarRendering), armorBarRendering},
-		{"[F10] Hitmarker & Sound", getStatusText(hitmarkerRendering), hitmarkerRendering},
-		{"[F11] Config Kaydet", "[ KAYDET ]", true},
+		{"[F9] Native Body Glow", getStatusText(bodyGlowEnabled), bodyGlowEnabled},
+		{"[F10] Armor Bar", getStatusText(armorBarRendering), armorBarRendering},
+		{"[F11] Hitmarker & Sound", getStatusText(hitmarkerRendering), hitmarkerRendering},
+		{"[F12] Config Kaydet", "[ KAYDET ]", true},
 		{"[DELETE] Panic Button", "[ ACİL ÇIKIŞ ]", true},
 	}
 
@@ -809,7 +834,7 @@ func drawInGameMenu(hdc win.HDC) {
 		labelPtr, _ := windows.UTF16PtrFromString(item.label)
 		textOutProc.Call(uintptr(hdc), 45, uintptr(startY), uintptr(unsafe.Pointer(labelPtr)), uintptr(len(item.label)))
 
-		if item.label == "[F11] Config Kaydet" {
+		if item.label == "[F12] Config Kaydet" {
 			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 200, 255)))
 		} else if item.active && item.status == "[ AÇIK ]" {
 			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 255, 100)))
@@ -962,16 +987,20 @@ func listenHotkeys() {
 			rgbEspEnabled = !rgbEspEnabled
 			playBeep(rgbEspEnabled)
 		}
-		if isKeyPressed(0x78) { // F9 -> Armor Bar
+		if isKeyPressed(0x78) { // F9 -> Native Body Glow Toggle
+			bodyGlowEnabled = !bodyGlowEnabled
+			playBeep(bodyGlowEnabled)
+		}
+		if isKeyPressed(0x79) { // F10 -> Armor Bar
 			armorBarRendering = !armorBarRendering
 			playBeep(armorBarRendering)
 		}
-		if isKeyPressed(0x79) { // F10 -> Hitmarker
+		if isKeyPressed(0x7A) { // F11 -> Hitmarker
 			hitmarkerRendering = !hitmarkerRendering
 			hitSoundRendering = hitmarkerRendering
 			playBeep(hitmarkerRendering)
 		}
-		if isKeyPressed(0x7A) { // F11 -> Config Kaydet
+		if isKeyPressed(0x7B) { // F12 -> Config Kaydet
 			saveConfig()
 			playBeep(true)
 		}
