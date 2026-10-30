@@ -67,7 +67,6 @@ type Offset struct {
 	DwViewMatrix             uintptr `json:"dwViewMatrix"`
 	DwLocalPlayerPawn        uintptr `json:"dwLocalPlayerPawn"`
 	DwEntityList             uintptr `json:"dwEntityList"`
-	DwViewAngles             uintptr `json:"dwViewAngles"` // <-- EKLENDİ
 	M_hPlayerPawn            uintptr `json:"m_hPlayerPawn"`
 	M_iHealth                uintptr `json:"m_iHealth"`
 	M_lifeState              uintptr `json:"m_lifeState"`
@@ -81,6 +80,7 @@ type Offset struct {
 	M_ArmorValue             uintptr `json:"m_ArmorValue"`
 	M_pBulletServices        uintptr `json:"m_pBulletServices"`
 	M_totalHitsOnServer      uintptr `json:"m_totalHitsOnServer"`
+	M_flFlashDuration        uintptr `json:"m_flFlashDuration"`
 }
 
 // Config Yapısı
@@ -97,14 +97,13 @@ type Config struct {
 	HitmarkerRendering    bool `json:"hitmarkerRendering"`
 	HitSoundRendering     bool `json:"hitSoundRendering"`
 	SkeletonColorIndex    int  `json:"skeletonColorIndex"`
-	Spinbot               bool `json:"spinbot"`
+	NoFlash               bool `json:"noFlash"`
 }
 
 var (
 	cachedScreenWidth    float32
 	cachedScreenHeight   float32
-	spinbotEnabled       bool    = false
-	spinYaw              float32 = 0.0
+	noFlashEnabled       bool = false
 	user32               = windows.NewLazySystemDLL("user32.dll")
 	getForegroundWindow  = user32.NewProc("GetForegroundWindow")
 	gdi32                = windows.NewLazySystemDLL("gdi32.dll")
@@ -205,7 +204,7 @@ func saveConfig() {
 		HitmarkerRendering:  hitmarkerRendering,
 		HitSoundRendering:   hitSoundRendering,
 		SkeletonColorIndex:  skeletonColorIndex,
-		Spinbot:             spinbotEnabled,
+		NoFlash:             noFlashEnabled,
 	}
 
 	data, err := json.MarshalIndent(cfg, "", "  ")
@@ -235,7 +234,7 @@ func loadConfig() {
 		hitmarkerRendering = cfg.HitmarkerRendering
 		hitSoundRendering = cfg.HitSoundRendering
 		skeletonColorIndex = cfg.SkeletonColorIndex
-		spinbotEnabled = cfg.Spinbot
+		noFlashEnabled = cfg.NoFlash
 	}
 }
 
@@ -305,37 +304,33 @@ func write[T any](handle windows.Handle, address uintptr, value T) error {
 	return windows.WriteProcessMemory(
 		handle,
 		address,
-		(*byte)(unsafe.Pointer(&value)), // <-- BURASI (*byte) olarak düzeltildi
+		(*byte)(unsafe.Pointer(&value)),
 		unsafe.Sizeof(value),
 		&nLength,
 	)
 }
 
-// Spinbot Worker Fonksiyonu
-func runSpinbot(procHandle windows.Handle, clientDll uintptr, offsets Offset) {
+// No-Flash Worker Fonksiyonu
+func runNoFlash(procHandle windows.Handle, clientDll uintptr, offsets Offset) {
 	for {
-		if !spinbotEnabled {
-			time.Sleep(50 * time.Millisecond)
-			continue
-		}
-
-		if procHandle == 0 || clientDll == 0 || offsets.DwViewAngles == 0 {
+		if !noFlashEnabled {
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
 
-		spinYaw += 45.0
-		if spinYaw > 180.0 {
-			spinYaw = -180.0
+		if procHandle == 0 || clientDll == 0 || offsets.M_flFlashDuration == 0 {
+			time.Sleep(200 * time.Millisecond)
+			continue
 		}
 
-		viewAnglesAddr := clientDll + offsets.DwViewAngles
-		if viewAnglesAddr != clientDll {
-			write(procHandle, viewAnglesAddr, float32(89.0))     // Pitch
-			write(procHandle, viewAnglesAddr+4, float32(spinYaw)) // Yaw
+		var localPlayerP uintptr
+		err := read(procHandle, clientDll+offsets.DwLocalPlayerPawn, &localPlayerP)
+		if err == nil && localPlayerP != 0 {
+			var zero float32 = 0.0
+			write(procHandle, localPlayerP+offsets.M_flFlashDuration, zero)
 		}
 
-		time.Sleep(5 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 
@@ -812,7 +807,7 @@ func drawInGameMenu(hdc win.HDC) {
 	selectObject.Call(uintptr(hdc), menuBrush)
 	selectObject.Call(uintptr(hdc), menuBorderPen)
 
-	rectangleProc.Call(uintptr(hdc), 30, 30, 350, 445) // Menü boyutu spinbot eklendiği için uzatıldı
+	rectangleProc.Call(uintptr(hdc), 30, 30, 350, 445)
 
 	deleteObject.Call(menuBrush)
 	deleteObject.Call(menuBorderPen)
@@ -841,7 +836,7 @@ func drawInGameMenu(hdc win.HDC) {
 		{"[F9] Armor Bar", getStatusText(armorBarRendering), armorBarRendering},
 		{"[F10] Hitmarker & Sound", getStatusText(hitmarkerRendering), hitmarkerRendering},
 		{"[F11] Config Kaydet", "[ KAYDET ]", true},
-		{"[F12] Spinbot", getStatusText(spinbotEnabled), spinbotEnabled}, // <-- EKLENDİ
+		{"[F12] No-Flash", getStatusText(noFlashEnabled), noFlashEnabled}, // <-- EKLENDİ
 		{"[DELETE] Panic Button", "[ ACİL ÇIKIŞ ]", true},
 	}
 
@@ -1030,9 +1025,9 @@ func listenHotkeys() {
 			saveConfig()
 			playBeep(true)
 		}
-		if isKeyPressed(0x7B) { // F12 -> Spinbot Toggle
-			spinbotEnabled = !spinbotEnabled
-			playBeep(spinbotEnabled)
+		if isKeyPressed(0x7B) { // F12 -> No-Flash Toggle
+			noFlashEnabled = !noFlashEnabled
+			playBeep(noFlashEnabled)
 		}
 		if isKeyPressed(0x2E) { // VK_DELETE -> PANIC BUTTON
 			playBeep(false)
@@ -1097,8 +1092,8 @@ func main() {
 
 	offsets := getOffsets()
 
-	// Spinbot Goroutine'ini Başlat
-	go runSpinbot(procHandle, clientDll, offsets)
+	// No-Flash Goroutine'ini Başlat
+	go runNoFlash(procHandle, clientDll, offsets)
 
 	hdc := win.GetDC(hwnd)
 	if hdc == 0 {
