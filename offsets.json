@@ -2,7 +2,6 @@
     "dwViewMatrix": 39252432,
     "dwLocalPlayerPawn": 39229640,
     "dwEntityList": 41020168,
-    "dwViewAngles": 39321608,
     "m_hPlayerPawn": 2348,
     "m_iHealth": 844,
     "m_lifeState": 852,
@@ -15,5 +14,6 @@
     "m_sSanitizedPlayerName": 2168,
     "m_ArmorValue": 7888,
     "m_pBulletServices": 5488,
-    "m_totalHitsOnServer": 72
+    "m_totalHitsOnServer": 72,
+    "m_flFlashDuration": 4776
 }
