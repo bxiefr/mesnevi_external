@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MESNEVI External | CS2 Memory & Visualization Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root[data-theme="dark"] {
+            --bg-primary: #0a0b0e;
+            --bg-secondary: #12141a;
+            --bg-card: rgba(22, 26, 35, 0.75);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --border-accent: rgba(59, 130, 246, 0.4);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --accent-green: #10b981;
+            --accent-glow: rgba(59, 130, 246, 0.25);
+            --shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+        }
+
+        :root[data-theme="light"] {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #e2e8f0;
+            --bg-card: rgba(255, 255, 255, 0.85);
+            --border-color: rgba(0, 0, 0, 0.1);
+            --border-accent: rgba(59, 130, 246, 0.5);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --accent-blue: #2563eb;
+            --accent-purple: #7c3aed;
+            --accent-green: #059669;
+            --accent-glow: rgba(37, 99, 235, 0.15);
+            --shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Comfortaa', cursive, sans-serif;
+            transition: background-color 0.25s, color 0.25s, border-color 0.25s;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient Dynamic Background */
+        .ambient-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.35;
+            animation: pulse 8s infinite alternate;
+        }
+
+        .blob-1 {
+            top: -10%;
+            left: 20%;
+            width: 500px;
+            height: 500px;
+            background: var(--accent-blue);
+        }
+
+        .blob-2 {
+            bottom: -10%;
+            right: 15%;
+            width: 600px;
+            height: 600px;
+            background: var(--accent-purple);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1) translate(0, 0); }
+            100% { transform: scale(1.1) translate(30px, -20px); }
+        }
+
+        /* Header */
+        header {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-logo {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.3rem;
+            color: #fff;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .brand-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .theme-toggle, .lang-toggle, .nav-btn {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px 18px;
+            border-radius: 999px;
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+
+        .theme-toggle:hover, .lang-toggle:hover, .nav-btn:hover {
+            border-color: var(--border-accent);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px var(--accent-glow);
+        }
+
+        /* Hero Section */
+        .hero {
+            max-width: 900px;
+            margin: 50px auto 30px auto;
+            padding: 0 24px;
+            text-align: center;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-accent);
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            margin-bottom: 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        .badge-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-green);
+        }
+
+        .hero h1 {
+            font-size: clamp(2.2rem, 5vw, 3.8rem);
+            font-weight: 700;
+            line-height: 1.15;
+            letter-spacing: -1.5px;
+            margin-bottom: 20px;
+        }
+
+        .hero p {
+            font-size: clamp(1rem, 2vw, 1.15rem);
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 36px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            max-width: 1000px;
+            margin: 0 auto 40px auto;
+            padding: 0 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(12px);
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Section Container */
+        .section-container {
+            max-width: 1100px;
+            margin: 0 auto 50px auto;
+            padding: 0 24px;
+        }
+
+        .card-main {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 36px;
+            backdrop-filter: blur(16px);
+            box-shadow: var(--shadow);
+        }
+
+        .card-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .card-header h2 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+
+        .card-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Branch List */
+        .branches-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .branch-card {
+            background: rgba(125, 125, 125, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .branch-card:hover {
+            border-color: var(--border-accent);
+        }
+
+        .branch-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .branch-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tag-default {
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent-blue);
+            border-radius: 999px;
+            border: 1px solid var(--accent-blue);
+        }
+
+        .branch-time {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 999px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+
+        /* Hotkeys List */
+        .hotkeys-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 700px;
+            margin: 0 auto;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .hotkey-row {
+            background: rgba(125, 125, 125, 0.04);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.95rem;
+        }
+
+        .hotkey-row:hover {
+            border-color: var(--border-accent);
+        }
+
+        .key-badge {
+            color: var(--accent-blue);
+            font-weight: 700;
+            min-width: 65px;
+        }
+
+        .key-name {
+            flex-grow: 1;
+            color: var(--text-primary);
+            padding-left: 15px;
+        }
+
+        .key-options {
+            color: var(--accent-purple);
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .hotkey-row.end-key {
+            border-color: rgba(239, 68, 68, 0.4);
+            background: rgba(239, 68, 68, 0.03);
+        }
+
+        .hotkey-row.end-key .key-badge,
+        .hotkey-row.end-key .key-name {
+            color: #ef4444;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border-color);
+            padding: 30px 24px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            background: var(--bg-secondary);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ambient-bg">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <header>
+        <div class="brand">
+            <div class="brand-logo">M</div>
+            <div class="brand-name">MESNEVI External</div>
+        </div>
+        <div class="header-nav">
+            <button class="lang-toggle" onclick="toggleLanguage()">
+                🌐 <span id="langText">EN</span>
+            </button>
+            <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()">
+                <span id="themeIcon">☀️</span> <span id="themeText" data-i18n="themeLight">Aydınlık Mod</span>
+            </button>
+            <a href="https://github.com/bxiefr/mesnevi_external" target="_blank" class="nav-btn">
+                <span>⚡</span> GitHub
+            </a>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="badge">
+                <span class="badge-dot"></span> <span data-i18n="badgeText">Otomatik Senkronize CS2 Bellek Mimarisi</span>
+            </div>
+            <h1 data-i18n="heroTitle">Counter-Strike 2 External Görselleştirme Motoru</h1>
+            <p data-i18n="heroDesc">Go dili ile geliştirilmiş ultra hafif Win32 GDI arayüzü. Dinamik offset senkronizasyonu ile tam uyumlu performans.</p>
+        </section>
+
+        <!-- Dynamic Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="lastOffsetTime" data-i18n="loading">Yükleniyor...</div>
+                <div class="stat-label" data-i18n="statOffset">Son Offset Güncellemesi</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">Go 1.27.3</div>
+                <div class="stat-label" data-i18n="statEngine">Derleme Motoru</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="color: var(--accent-green);" data-i18n="statActive">AKTİF</div>
+                <div class="stat-label" data-i18n="statStatus">Mimari Durumu</div>
+            </div>
+        </div>
+
+        <!-- Download & Branch Hub -->
+        <section class="section-container" id="download">
+            <div class="card-main">
+                <div class="card-header">
+                    <h2 data-i18n="buildsTitle">Sürümler ve Derlemeler</h2>
+                    <p data-i18n="buildsDesc">CI/CD otomasyonu tarafından güncellenen aktif dallar (branches):</p>
+                </div>
+
+                <div class="branches-list" id="branchesList">
+                    <div style="text-align: center; padding: 20px; color: var(--text-secondary);" data-i18n="githubLoading">
+                        GitHub verileri çekiliyor...
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Hotkeys Guide -->
+        <section class="section-container">
+            <div class="card-main">
+                <div class="card-header">
+                    <h2 data-i18n="hotkeysTitle">KISAYOL TUŞLARI (HOTKEYS)</h2>
+                    <p data-i18n="hotkeysDesc">Yazılım içi kontrol tuşları ve işlevleri</p>
+                </div>
+
+                <div class="hotkeys-list">
+                    <div class="hotkey-row">
+                        <span class="key-badge">[F1]</span>
+                        <span class="key-name" data-i18n="hkBox">Çerçeve Görselleştirme (Box ESP)</span>
+                    </div>
+                    <div class="hotkey-row">
+                        <span class="key-badge">[F2]</span>
+                        <span class="key-name" data-i18n="hkSkel">İskelet Çizimi (Skeleton ESP)</span>
+                    </div>
+                    <div class="hotkey-row">
+                        <span class="key-badge">[F3]</span>
+                        <span class="key-name" data-i18n="hkHead">Kafa Hedef Halkası (Head Circle)</span>
+                    </div>
+                    <div class="hotkey-row">
+                        <span class="key-badge">[F4]</span>
+                        <span class="key-name" data-i18n="hkTeam">Takım Filtresi (Team Check)</span>
+                    </div>
+                    <div class="hotkey-row">
+                        <span class="key-badge">[F5]</span>
+                        <span class="key-name" data-i18n="hkHealth">Sağlık Göstergesi (Health Bar)</span>
+                    </div>
+                    <div class="hotkey-row">
+                        <span class="key-badge">[F6]</span>
+                        <span class="key-name" data-i18n="hkName">Oyuncu İsmi Etiketi (Player Name)</span>
+                    </div>
+                    <div class="hotkey-row">
+                        <span class="key-badge">[F7]</span>
+                        <span class="key-name" data-i18n="hkDist">Mesafe Ölçer (Distance Display)</span>
+                    </div>
+                    <div class="hotkey-row">
+                        <span class="key-badge">[F8]</span>
+                        <span class="key-name" data-i18n="hkColor">İskelet Rengi (Skeleton Color)</span>
+                        <span class="key-options" data-i18n="hkColors">MAVİ / YEŞİL / KIRMIZI</span>
+                    </div>
+                    <div class="hotkey-row">
+                        <span class="key-badge">[F9]</span>
+                        <span class="key-name" data-i18n="hkArmor">Zırh Göstergesi (Armor Bar)</span>
+                    </div>
+                    <div class="hotkey-row">
+                        <span class="key-badge">[F10]</span>
+                        <span class="key-name" data-i18n="hkHit">Vuruş İşaretçisi & Ses (Hitmarker & Sound)</span>
+                    </div>
+                    <div class="hotkey-row end-key">
+                        <span class="key-badge">[END]</span>
+                        <span class="key-name" data-i18n="hkClose">Uygulamayı Kapat (Close Process)</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 MESNEVI External | CS2 Memory & Visualization Engine</p>
+    </footer>
+
+    <script>
+        const owner = "bxiefr";
+        const repo = "mesnevi_external";
+
+        // Dil Sözlüğü (i18n)
+        const i18n = {
+            tr: {
+                themeLight: "Aydınlık Mod",
+                themeDark: "Karanlık Mod",
+                badgeText: "Otomatik Senkronize CS2 Bellek Mimarisi",
+                heroTitle: "Counter-Strike 2 External Görselleştirme Motoru",
+                heroDesc: "Go dili ile geliştirilmiş ultra hafif Win32 GDI arayüzü. Dinamik offset senkronizasyonu ile tam uyumlu performans.",
+                loading: "Yükleniyor...",
+                statOffset: "Son Offset Güncellemesi",
+                statEngine: "Derleme Motoru",
+                statActive: "AKTİF",
+                statStatus: "Mimari Durumu",
+                buildsTitle: "Sürümler ve Derlemeler",
+                buildsDesc: "CI/CD otomasyonu tarafından güncellenen aktif dallar (branches):",
+                githubLoading: "GitHub verileri çekiliyor...",
+                hotkeysTitle: "KISAYOL TUŞLARI (HOTKEYS)",
+                hotkeysDesc: "Yazılım içi kontrol tuşları ve işlevleri",
+                hkBox: "Çerçeve Görselleştirme (Box ESP)",
+                hkSkel: "İskelet Çizimi (Skeleton ESP)",
+                hkHead: "Kafa Hedef Halkası (Head Circle)",
+                hkTeam: "Takım Filtresi (Team Check)",
+                hkHealth: "Sağlık Göstergesi (Health Bar)",
+                hkName: "Oyuncu İsmi Etiketi (Player Name)",
+                hkDist: "Mesafe Ölçer (Distance Display)",
+                hkColor: "İskelet Rengi (Skeleton Color)",
+                hkColors: "MAVİ / YEŞİL / KIRMIZI",
+                hkArmor: "Zırh Göstergesi (Armor Bar)",
+                hkHit: "Vuruş İşaretçisi & Ses (Hitmarker & Sound)",
+                hkClose: "Uygulamayı Kapat (Close Process)",
+                tagDefault: "Varsayılan",
+                lastUpdate: "Son Güncelleme:",
+                inspectDownload: "İncele & İndir",
+                unknownDate: "Bilinmiyor",
+                currentDate: "Güncel",
+                fetchError: "Veriler çekilemedi."
+            },
+            en: {
+                themeLight: "Light Mode",
+                themeDark: "Dark Mode",
+                badgeText: "Auto-Synced CS2 Memory Architecture",
+                heroTitle: "Counter-Strike 2 External Visualization Engine",
+                heroDesc: "Ultra-lightweight Win32 GDI overlay interface built with Go. Fully compatible performance powered by dynamic offset synchronization.",
+                loading: "Loading...",
+                statOffset: "Last Offset Sync",
+                statEngine: "Build Engine",
+                statActive: "ACTIVE",
+                statStatus: "Architecture Status",
+                buildsTitle: "Releases & Builds",
+                buildsDesc: "Active branches updated automatically via CI/CD pipelines:",
+                githubLoading: "Fetching GitHub repository data...",
+                hotkeysTitle: "HOTKEYS GUIDE",
+                hotkeysDesc: "Application key bindings and core functions",
+                hkBox: "Bounding Box Overlay (Box ESP)",
+                hkSkel: "Bone Structure (Skeleton ESP)",
+                hkHead: "Target Head Indicator (Head Circle)",
+                hkTeam: "Faction Filter (Team Check)",
+                hkHealth: "Vitality Gauge (Health Bar)",
+                hkName: "Player Identity Tag (Player Name)",
+                hkDist: "Telemetry Distance (Distance Display)",
+                hkColor: "Bone Color Scheme (Skeleton Color)",
+                hkColors: "BLUE / GREEN / RED",
+                hkArmor: "Armor Gauge (Armor Bar)",
+                hkHit: "Hitmarker & Acoustic Feedback",
+                hkClose: "Terminate Process (Close App)",
+                tagDefault: "Default",
+                lastUpdate: "Last Update:",
+                inspectDownload: "Inspect & Download",
+                unknownDate: "Unknown",
+                currentDate: "Up to date",
+                fetchError: "Failed to fetch repository data."
+            }
+        };
+
+        let currentLang = localStorage.getItem("lang") || "tr";
+
+        function applyLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem("lang", lang);
+            document.getElementById("langText").innerText = lang === "tr" ? "EN" : "TR";
+
+            document.querySelectorAll("[data-i18n]").forEach(elem => {
+                const key = elem.getAttribute("data-i18n");
+                if (i18n[lang][key]) {
+                    elem.innerText = i18n[lang][key];
+                }
+            });
+
+            // Tema buton yazısını güncelle
+            const currentTheme = document.documentElement.getAttribute("data-theme");
+            updateThemeUI(currentTheme);
+
+            // GitHub verilerini yeniden render et
+            loadBranches();
+            loadLastOffsetTime();
+        }
+
+        function toggleLanguage() {
+            const nextLang = currentLang === "tr" ? "en" : "tr";
+            applyLanguage(nextLang);
+        }
+
+        // Tema Yönetimi
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute("data-theme");
+            const newTheme = currentTheme === "dark" ? "light" : "dark";
+            
+            html.setAttribute("data-theme", newTheme);
+            localStorage.setItem("theme", newTheme);
+            updateThemeUI(newTheme);
+        }
+
+        function updateThemeUI(theme) {
+            const themeIcon = document.getElementById("themeIcon");
+            const themeText = document.getElementById("themeText");
+            if (theme === "dark") {
+                themeIcon.innerText = "☀️";
+                themeText.innerText = i18n[currentLang].themeLight;
+            } else {
+                themeIcon.innerText = "🌙";
+                themeText.innerText = i18n[currentLang].themeDark;
+            }
+        }
+
+        const savedTheme = localStorage.getItem("theme") || 
+            (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+        document.documentElement.setAttribute("data-theme", savedTheme);
+        updateThemeUI(savedTheme);
+
+        // GitHub Branch Çekme Fonksiyonu
+        async function loadBranches() {
+            const branchesList = document.getElementById('branchesList');
+            const langDict = i18n[currentLang];
+            try {
+                const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/branches`);
+                if (!response.ok) throw new Error("API Limit");
+                
+                const branches = await response.json();
+                branchesList.innerHTML = "";
+
+                for (const branch of branches) {
+                    if (branch.name === "cli") continue;
+
+                    let formattedDate = langDict.unknownDate;
+                    try {
+                        const commitRes = await fetch(branch.commit.url);
+                        if (commitRes.ok) {
+                            const commitData = await commitRes.json();
+                            const rawDate = commitData.commit.committer.date;
+                            formattedDate = new Date(rawDate).toLocaleString(currentLang === 'tr' ? 'tr-TR' : 'en-US', {
+                                timeZone: 'Europe/Istanbul',
+                                year: 'numeric', month: 'short', day: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                            });
+                        }
+                    } catch (e) {}
+
+                    const card = document.createElement('div');
+                    card.className = 'branch-card';
+                    card.innerHTML = `
+                        <div class="branch-meta">
+                            <div class="branch-title">
+                                🌿 ${branch.name}
+                                ${branch.name === 'v1.8.3main' ? `<span class="tag-default">${langDict.tagDefault}</span>` : ''}
+                            </div>
+                            <div class="branch-time">${langDict.lastUpdate} ${formattedDate}</div>
+                        </div>
+                        <a href="https://github.com/${owner}/${repo}/tree/${branch.name}" target="_blank" class="btn-download">
+                            <span>📦</span> ${langDict.inspectDownload}
+                        </a>
+                    `;
+                    branchesList.appendChild(card);
+                }
+            } catch (err) {
+                branchesList.innerHTML = `<div style="text-align: center; color: #ef4444;">${langDict.fetchError}</div>`;
+            }
+        }
+
+        // Son Offset Zamanını Çekme
+        async function loadLastOffsetTime() {
+            const statBox = document.getElementById('lastOffsetTime');
+            const langDict = i18n[currentLang];
+            try {
+                const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?path=offsets.json&sha=v1.8.3main&per_page=1`);
+                if (!response.ok) throw new Error("API Limit");
+
+                const commits = await response.json();
+                if (commits.length > 0) {
+                    const rawDate = commits[0].commit.committer.date;
+                    const dateFormatted = new Date(rawDate).toLocaleString(currentLang === 'tr' ? 'tr-TR' : 'en-US', {
+                        timeZone: 'Europe/Istanbul',
+                        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                    });
+                    statBox.innerText = dateFormatted;
+                } else {
+                    statBox.innerText = langDict.unknownDate;
+                }
+            } catch (err) {
+                statBox.innerText = langDict.currentDate;
+            }
+        }
+
+        // Sayfa Yüklendiğinde Dili Uygula
+        applyLanguage(currentLang);
+    </script>
+</body>
+</html>
