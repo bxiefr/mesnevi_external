@@ -2,6 +2,18 @@ name: Build All Branches
 
 on:
   workflow_dispatch:
+    inputs:
+      build_v187:
+        description: 'v1.8.7main branchini build et'
+        required: true
+        type: boolean
+        default: true
+      build_v188:
+        description: 'v1.8.8neon branchini build et'
+        required: true
+        type: boolean
+        default: true
+
   push:
     branches: [ "cli" ]
 
@@ -14,23 +26,35 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target_branch: ["v1.8.7main", "v1.8.8neon"]
+        include:
+          - target_branch: "v1.8.7main"
+            enable: ${{ inputs.build_v187 == true || github.event_name == 'push' }}
+          - target_branch: "v1.8.8neon"
+            enable: ${{ inputs.build_v188 == true || github.event_name == 'push' }}
 
     steps:
+    - name: Check if branch is enabled
+      if: ${{ matrix.enable == false }}
+      run: echo "Bu branch secilmedi, atlanıyor..."
+
     - name: Checkout Target Branch (${{ matrix.target_branch }})
+      if: ${{ matrix.enable == true }}
       uses: actions/checkout@v4
       with:
         ref: ${{ matrix.target_branch }}
 
     - name: Set up Go
+      if: ${{ matrix.enable == true }}
       uses: actions/setup-go@v5
       with:
         go-version: 'stable'
 
     - name: Tidy Dependencies
+      if: ${{ matrix.enable == true }}
       run: go mod tidy
 
     - name: Get current date, time and source info
+      if: ${{ matrix.enable == true }}
       run: |
         $now = (Get-Date).AddHours(3)
         echo "DATE=$($now.ToString('yyyyMMdd'))" >> $env:GITHUB_ENV
@@ -38,21 +62,25 @@ jobs:
         echo "TAGNAME=v$($now.ToString('yyyyMMdd-HHmmss'))-${{ matrix.target_branch }}" >> $env:GITHUB_ENV
 
     - name: Build Windows Executable
+      if: ${{ matrix.enable == true }}
       run: |
         go build -o mesnevi.exe .
 
     - name: Prepare Release Folder
+      if: ${{ matrix.enable == true }}
       run: |
         mkdir release_folder
         copy mesnevi.exe release_folder\
 
     - name: Upload Artifact
+      if: ${{ matrix.enable == true }}
       uses: actions/upload-artifact@v4
       with:
         name: mesnevi-${{ env.DATE }}-${{ matrix.target_branch }}
         path: release_folder/
 
     - name: Create GitHub Release
+      if: ${{ matrix.enable == true }}
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ env.TAGNAME }}
@@ -61,7 +89,7 @@ jobs:
           ### Build Details
           - **Build Time:** ${{ env.DATETIME }}
           - **Source Branch:** `${{ matrix.target_branch }}`
-          - **Status:** Automated CLI Build
+          - **Status:** Automated CLI Build (Manual Checkbox Trigger)
         files: |
           release_folder/mesnevi.exe
       env:
