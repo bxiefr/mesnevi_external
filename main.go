@@ -33,7 +33,6 @@ var embeddedHitSound []byte
 
 // GitHub Güncelleme Ayarları
 const githubRepo = "bxiefr/mesnevi_external"
-var currentVersion = "0"
 
 type GitHubRelease struct {
 	TagName string `json:"tag_name"`
@@ -196,49 +195,34 @@ func init() {
 
 func checkForUpdates() {
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", githubRepo)
-	
-	fmt.Printf("[DEBUG] GitHub API'ye istek atiliyor: %s\n", apiURL)
+
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(apiURL)
 	if err != nil {
-		fmt.Printf("[DEBUG] API istegi basarisiz hata: %v\n", err)
 		return
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("[DEBUG] HTTP Status Code: %d\n", resp.StatusCode)
 	if resp.StatusCode != 200 {
 		return
 	}
 
 	var release GitHubRelease
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		fmt.Printf("[DEBUG] JSON decode hatasi: %v\n", err)
 		return
 	}
 
-	fmt.Printf("[DEBUG] GitHub'dan gelen TagName (Remote): '%s'\n", release.TagName)
-	fmt.Printf("[DEBUG] Programin icindeki Local Version: '%s'\n", currentVersion)
-
-	if release.TagName == "" {
-		fmt.Println("[DEBUG] GitHub TagName bos geldigi icin islem yapilmiyor.")
-		return
-	}
-
-	if currentVersion == "0" {
-		fmt.Println("[DEBUG] Local versiyon '0' (dev modu), guncelleme kontrolu atlandi.")
+	if release.TagName == "" || currentVersion == "0" {
 		return
 	}
 
 	remoteVersion, err1 := strconv.ParseInt(release.TagName, 10, 64)
 	localVersion, err2 := strconv.ParseInt(currentVersion, 10, 64)
 
-	fmt.Printf("[DEBUG] Parse sonuclari -> Remote Int: %d (Err: %v) | Local Int: %d (Err: %v)\n", remoteVersion, err1, localVersion, err2)
-
 	if err1 == nil && err2 == nil {
 		if remoteVersion > localVersion {
 			fmt.Printf("\n[!] Yeni surum bulundu (%s -> %s). Guncellemek ister misin? [Y/N]: ", currentVersion, release.TagName)
-			
+
 			var choice string
 			_, _ = fmt.Scanln(&choice)
 
@@ -254,11 +238,7 @@ func checkForUpdates() {
 			} else {
 				fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
 			}
-		} else {
-			fmt.Println("[DEBUG] Local versiyon guncel veya daha yeni. Guncelleme gerekmiyor.")
 		}
-	} else {
-		fmt.Println("[DEBUG] Sayisal donusum hatasi! TagName veya currentVersion saf rakam (timestamp) formatinda degil.")
 	}
 }
 
@@ -1102,11 +1082,7 @@ func listenHotkeys() {
 }
 
 func main() {
-	// Konsolda güncel sürüm ve başlık bilgisini göster
-	fmt.Printf("=========================================\n")
-	fmt.Printf("  MESNEVI EXTERNAL - Sürüm: %s\n", currentVersion)
-	fmt.Printf("=========================================\n\n")
-	
+
 	// Program açılışında bir kere güncelleme kontrolü yap ve kullanıcıya sor
 	checkForUpdates()
 
