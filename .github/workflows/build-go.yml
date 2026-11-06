@@ -1,4 +1,4 @@
-name: Build All Branches
+name: Build All Branches (Pure CLI)
 
 on:
   workflow_dispatch:
@@ -37,69 +37,58 @@ jobs:
       if: ${{ matrix.enable == false }}
       run: echo "Bu branch secilmedi, atlanıyor..."
 
-    - name: Checkout Target Branch (${{ matrix.target_branch }})
+    - name: Clone and Checkout Branch
       if: ${{ matrix.enable == true }}
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ matrix.target_branch }}
+      run: |
+        git clone --branch ${{ matrix.target_branch }} https://github.com/${{ github.repository }}.git .
+      shell: pwsh
 
-    - name: Set up Go
+    - name: Verify Go Installation
       if: ${{ matrix.enable == true }}
-      uses: actions/setup-go@v5
-      with:
-        go-version: 'stable'
+      run: |
+        go version
+      shell: pwsh
 
     - name: Tidy Dependencies
       if: ${{ matrix.enable == true }}
       run: go mod tidy
+      shell: pwsh
 
     - name: Get current date, time and source info
       if: ${{ matrix.enable == true }}
       run: |
         $now = (Get-Date).AddHours(3)
         $timestamp = $now.ToString('yyyyMMddHHmmss')
-        
-        # Branch ismine göre tag'i benzersiz yapıyoruz ki çakışma olmasın!
         $branchTag = "${{ matrix.target_branch }}-$timestamp"
         
         echo "DATE=$($now.ToString('yyyyMMdd'))" >> $env:GITHUB_ENV
         echo "DATETIME=$($now.ToString('yyyy-MM-dd HH:mm'))" >> $env:GITHUB_ENV
         echo "TAGNAME=$branchTag" >> $env:GITHUB_ENV
-        
-        # Go build için saf sayısal timestamp'i ayrıca kaydediyoruz
         echo "PURE_TIMESTAMP=$timestamp" >> $env:GITHUB_ENV
+      shell: pwsh
 
     - name: Build Windows Executable
       if: ${{ matrix.enable == true }}
       run: |
-        # Go içine saf sayısal timestamp mühürleniyor (güncelleme kıyaslaması bozulmasın diye)
         go build -ldflags="-s -w -X 'main.currentVersion=${{ env.PURE_TIMESTAMP }}'" -o mesnevi.exe .
+      shell: pwsh
 
     - name: Prepare Release Folder
       if: ${{ matrix.enable == true }}
       run: |
         mkdir release_folder
         copy mesnevi.exe release_folder\
+      shell: pwsh
 
-    - name: Upload Artifact
+    - name: Create GitHub Release via Native GH CLI
       if: ${{ matrix.enable == true }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: mesnevi-${{ env.DATE }}-${{ matrix.target_branch }}
-        path: release_folder/
-
-    - name: Create GitHub Release
-      if: ${{ matrix.enable == true }}
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ env.TAGNAME }}
-        name: Build ${{ env.DATETIME }} (${{ matrix.target_branch }})
-        body: |
-          ### Build Details
-          - **Build Time:** ${{ env.DATETIME }}
-          - **Source Branch:** `${{ matrix.target_branch }}`
-          - **Status:** Automated CLI Build (Manual Checkbox Trigger)
-        files: |
-          release_folder/mesnevi.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        $releaseBody = "### Build Details`n- **Build Time:** ${{ env.DATETIME }}`n- **Source Branch:** `${{ matrix.target_branch }}` `n- **Status:** Automated Native CLI Build"
+        
+        gh release create "${{ env.TAGNAME }}" `
+          --title "Build ${{ env.DATETIME }} (${{ matrix.target_branch }})" `
+          --notes "$releaseBody" `
+          release_folder/mesnevi.exe
+      shell: pwsh
