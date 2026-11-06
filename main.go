@@ -207,37 +207,34 @@ func checkForUpdates() {
 		return
 	}
 
-	var release GitHubRelease
+var release GitHubRelease
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return
 	}
-
-	if release.TagName == "" || currentVersion == "0" {
+	
+	if release.TagName == "" {
 		return
 	}
 
-	remoteVersion, err1 := strconv.ParseInt(release.TagName, 10, 64)
-	localVersion, err2 := strconv.ParseInt(currentVersion, 10, 64)
+	// currentVersion tamamen kaldırıldı, doğrudan GitHub'daki tag baz alınarak soruluyor
+	fmt.Printf("\n[!] Yeni bir surum bulundu (%s). Guncellemek ister misin? [Y/N]: ", release.TagName)
 
-	if err1 == nil && err2 == nil {
-		if remoteVersion > localVersion {
-			fmt.Printf("\n[!] Yeni surum bulundu (%s -> %s). Guncellemek ister misin? [Y/N]: ", currentVersion, release.TagName)
+	var choice string
+	_, _ = fmt.Scanln(&choice)
 
-			var choice string
-			_, _ = fmt.Scanln(&choice)
-
-			choice = strings.TrimSpace(strings.ToUpper(choice))
-			if choice == "Y" || choice == "EVET" {
-				for _, asset := range release.Assets {
-					if asset.Name == "mesnevi.exe" {
-						fmt.Println("[*] Guncelleme indiriliyor...")
-						downloadAndUpdate(asset.BrowserDownloadURL)
-						break
-					}
-				}
-			} else {
-				fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
+	choice = strings.TrimSpace(strings.ToUpper(choice))
+	if choice == "Y" || choice == "EVET" {
+		for _, asset := range release.Assets {
+			if asset.Name == "mesnevi.exe" {
+				fmt.Println("[*] Guncelleme indiriliyor...")
+				downloadAndUpdate(asset.BrowserDownloadURL)
+				break
 			}
+		}
+	} else {
+		fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
+	}
+	
 		}
 	}
 }
