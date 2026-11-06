@@ -246,6 +246,7 @@ func downloadAndUpdate(downloadURL string) {
 		return
 	}
 
+	// Eski exe'yi silip yenisini taşıyan ve programı yeniden başlatan batch scripti
 	batchPath := filepath.Join(os.TempDir(), "update.bat")
 	batchContent := fmt.Sprintf(`@echo off
 timeout /t 2 /nobreak > nul
@@ -257,16 +258,11 @@ del "%%~f0"
 
 	_ = os.WriteFile(batchPath, []byte(batchContent), 0644)
 
-	var sz uintptr = unsafe.Sizeof(syscall.ShellExecuteInfo{})
-	sei := syscall.ShellExecuteInfo{
-		CbSize:       uint32(sz),
-		FMask:        syscall.SEE_MASK_DEFAULT,
-		Hwnd:         0,
-		LpVerb:       syscall.StringToUTF16Ptr("open"),
-		LpFile:       syscall.StringToUTF16Ptr(batchPath),
-		NShow:        syscall.SW_HIDE,
-	}
-	syscall.ShellExecuteEx(&sei)
+	// Batch dosyasını gizli komut satırı olarak çalıştır ve mevcut süreci kapat
+	cmd := exec.Command("cmd.exe", "/c", batchPath)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	_ = cmd.Start()
+
 	os.Exit(0)
 }
 
