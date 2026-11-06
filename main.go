@@ -259,9 +259,12 @@ func downloadAndUpdate(downloadURL string) {
 	if err != nil {
 		return
 	}
-	defer out.Close()
 
 	_, err = io.Copy(out, resp.Body)
+	
+	// KRİTİK NOKTA: Dosya kilitli kalmasın diye defer yerine MANUEL kapatıyoruz!
+	out.Close() 
+	
 	if err != nil {
 		return
 	}
@@ -275,11 +278,14 @@ start "" "%s"
 del "%%~f0"
 `, exePath, tmpPath, exePath, exePath)
 
-	_ = os.WriteFile(batchPath, []byte(batchContent), 0644)
+	if err := os.WriteFile(batchPath, []byte(batchContent), 0644); err != nil {
+		return
+	}
 
-	// Burada konsolu gizlemiyoruz ki kullanıcı güncellemenin bittiğini görebilsin
 	cmd := exec.Command("cmd.exe", "/c", batchPath)
-	_ = cmd.Start()
+	if err := cmd.Start(); err != nil {
+		return
+	}
 
 	os.Exit(0)
 }
