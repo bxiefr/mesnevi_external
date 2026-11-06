@@ -32,7 +32,7 @@ var embeddedHitSound []byte
 
 // GitHub Güncelleme Ayarları
 const githubRepo = "bxiefr/mesnevi_external"
-const currentVersion = "dev"
+const currentVersion = "0"
 
 type GitHubRelease struct {
 	TagName string `json:"tag_name"`
@@ -193,7 +193,6 @@ func init() {
 	loadConfig()
 }
 
-// Akıllı Güncelleme Kontrolü ve Kullanıcıya Sorma (Y/N)
 func checkForUpdates() {
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", githubRepo)
 	
@@ -213,27 +212,43 @@ func checkForUpdates() {
 		return
 	}
 
-	if release.TagName == "" || release.TagName == currentVersion {
-		return // Sürüm aynıysa veya boşsa hiç bulaşma, döngüyü engelle
+	if release.TagName == "" {
+		return
 	}
 
-	// Yeni sürüm bulundu! Konsola kullanıcıya soran metin yazdıralım
-	fmt.Printf("\n[!] Yeni surum bulundu (%s -> %s). Guncellemek ister misin? [Y/N]: ", currentVersion, release.TagName)
-	
-	var choice string
-	_, _ = fmt.Scanln(&choice)
+	// Localde "0" ile test ediyorsan veya ilk kez çalıştırıyorsan direkt geçebilir
+	if currentVersion == "0" {
+		return
+	}
 
-	choice = strings.TrimSpace(strings.ToUpper(choice))
-	if choice == "Y" || choice == "EVET" {
-		for _, asset := range release.Assets {
-			if asset.Name == "mesnevi.exe" {
-				fmt.Println("[*] Guncelleme indiriliyor...")
-				downloadAndUpdate(asset.BrowserDownloadURL)
-				break
+	// GitHub'dan gelen tag adından (Örn: v20261106-210124-v1.8.8neon) sadece sayıları ayıklayalım ya da 
+	// Actions tarafında tag'i direkt saf timestamp (Örn: 20261106210124) olarak basalım.
+	// En temizi Actions tarafında TAGNAME'i direkt sayısal timestamp yapmak!
+	
+	remoteVersion, err1 := strconv.ParseInt(release.TagName, 10, 64)
+	localVersion, err2 := strconv.ParseInt(currentVersion, 10, 64)
+
+	// Eğer dönüşüm başarılıysa sayısal olarak kıyasla: GitHub'daki sürüm localdekinden BÜYÜKSE güncelleme var!
+	if err1 == nil && err2 == nil {
+		if remoteVersion > localVersion {
+			fmt.Printf("\n[!] Yeni surum bulundu (%s -> %s). Guncellemek ister misin? [Y/N]: ", currentVersion, release.TagName)
+			
+			var choice string
+			_, _ = fmt.Scanln(&choice)
+
+			choice = strings.TrimSpace(strings.ToUpper(choice))
+			if choice == "Y" || choice == "EVET" {
+				for _, asset := range release.Assets {
+					if asset.Name == "mesnevi.exe" {
+						fmt.Println("[*] Guncelleme indiriliyor...")
+						downloadAndUpdate(asset.BrowserDownloadURL)
+						break
+					}
+				}
+			} else {
+				fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
 			}
 		}
-	} else {
-		fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
 	}
 }
 
