@@ -67,7 +67,8 @@ jobs:
     - name: Build Windows Executable
       if: ${{ matrix.enable == true }}
       run: |
-        go build -o mesnevi.exe .
+        # Go build esnasında main paketindeki currentVersion değişkenine güncel TAGNAME değerini basıyoruz
+        go build -ldflags="-s -w -X 'main.currentVersion=${{ env.TAGNAME }}'" -o mesnevi.exe .
 
     - name: Prepare Release Folder
       if: ${{ matrix.enable == true }}
