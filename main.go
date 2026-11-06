@@ -197,39 +197,44 @@ func init() {
 func checkForUpdates() {
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", githubRepo)
 	
+	fmt.Printf("[DEBUG] GitHub API'ye istek atiliyor: %s\n", apiURL)
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(apiURL)
 	if err != nil {
+		fmt.Printf("[DEBUG] API istegi basarisiz hata: %v\n", err)
 		return
 	}
 	defer resp.Body.Close()
 
+	fmt.Printf("[DEBUG] HTTP Status Code: %d\n", resp.StatusCode)
 	if resp.StatusCode != 200 {
 		return
 	}
 
 	var release GitHubRelease
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		fmt.Printf("[DEBUG] JSON decode hatasi: %v\n", err)
 		return
 	}
+
+	fmt.Printf("[DEBUG] GitHub'dan gelen TagName (Remote): '%s'\n", release.TagName)
+	fmt.Printf("[DEBUG] Programin icindeki Local Version: '%s'\n", currentVersion)
 
 	if release.TagName == "" {
+		fmt.Println("[DEBUG] GitHub TagName bos geldigi icin islem yapilmiyor.")
 		return
 	}
 
-	// Localde "0" ile test ediyorsan veya ilk kez çalıştırıyorsan direkt geçebilir
 	if currentVersion == "0" {
+		fmt.Println("[DEBUG] Local versiyon '0' (dev modu), guncelleme kontrolu atlandi.")
 		return
 	}
 
-	// GitHub'dan gelen tag adından (Örn: v20261106-210124-v1.8.8neon) sadece sayıları ayıklayalım ya da 
-	// Actions tarafında tag'i direkt saf timestamp (Örn: 20261106210124) olarak basalım.
-	// En temizi Actions tarafında TAGNAME'i direkt sayısal timestamp yapmak!
-	
 	remoteVersion, err1 := strconv.ParseInt(release.TagName, 10, 64)
 	localVersion, err2 := strconv.ParseInt(currentVersion, 10, 64)
 
-	// Eğer dönüşüm başarılıysa sayısal olarak kıyasla: GitHub'daki sürüm localdekinden BÜYÜKSE güncelleme var!
+	fmt.Printf("[DEBUG] Parse sonuclari -> Remote Int: %d (Err: %v) | Local Int: %d (Err: %v)\n", remoteVersion, err1, localVersion, err2)
+
 	if err1 == nil && err2 == nil {
 		if remoteVersion > localVersion {
 			fmt.Printf("\n[!] Yeni surum bulundu (%s -> %s). Guncellemek ister misin? [Y/N]: ", currentVersion, release.TagName)
@@ -249,7 +254,11 @@ func checkForUpdates() {
 			} else {
 				fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
 			}
+		} else {
+			fmt.Println("[DEBUG] Local versiyon guncel veya daha yeni. Guncelleme gerekmiyor.")
 		}
+	} else {
+		fmt.Println("[DEBUG] Sayisal donusum hatasi! TagName veya currentVersion saf rakam (timestamp) formatinda degil.")
 	}
 }
 
