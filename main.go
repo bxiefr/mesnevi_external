@@ -859,8 +859,8 @@ func drawInGameMenu(hdc win.HDC) {
 
 	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 255, 255)))
 	
-	titleStr, _ := windows.UTF16PtrFromString("--- MESNEVI EXTERNAL GUI ---")
-	textOutProc.Call(uintptr(hdc), 50, 45, uintptr(unsafe.Pointer(titleStr)), uintptr(len("--- MESNEVI EXTERNAL GUI ---")))
+	titleStr, _ := windows.UTF16PtrFromString("--- MESNEVI EXTERNAL ---")
+	textOutProc.Call(uintptr(hdc), 50, 45, uintptr(unsafe.Pointer(titleStr)), uintptr(len("--- MESNEVI EXTERNAL ---")))
 
 	colorNames := []string{"MAVİ", "YEŞİL", "KIRMIZI"}
 	currentColor := colorNames[skeletonColorIndex]
@@ -1077,6 +1077,11 @@ func listenHotkeys() {
 }
 
 func main() {
+	// Konsolda güncel sürüm ve başlık bilgisini göster
+	fmt.Printf("=========================================\n")
+	fmt.Printf("  MESNEVI EXTERNAL - Sürüm: %s\n", currentVersion)
+	fmt.Printf("=========================================\n\n")
+	
 	// Program açılışında bir kere güncelleme kontrolü yap ve kullanıcıya sor
 	checkForUpdates()
 
