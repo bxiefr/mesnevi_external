@@ -243,7 +243,8 @@ var release GitHubRelease
 		}
 	} else {
 		fmt.Println("[*] Hile guncel. Baslatiliyor...")
-	}
+    }
+}
 
 func downloadAndUpdate(downloadURL string) {
 	exePath, err := os.Executable()
