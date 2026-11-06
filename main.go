@@ -193,7 +193,6 @@ func init() {
 	loadConfig()
 }
 
-// Otomatik Güncelleme Fonksiyonları
 func checkForUpdates() {
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", githubRepo)
 	
@@ -213,6 +212,12 @@ func checkForUpdates() {
 		return
 	}
 
+	// Boş tag kontrolü ekleyelim ki api hatasında tetiklenmesin
+	if release.TagName == "" {
+		return
+	}
+
+	// Sadece GitHub'daki Tag, bizim currentVersion'dan FARKLIYSA VE boş değilse güncelle
 	if release.TagName != currentVersion {
 		for _, asset := range release.Assets {
 			if asset.Name == "mesnevi.exe" {
