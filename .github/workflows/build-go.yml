@@ -57,17 +57,15 @@ jobs:
       if: ${{ matrix.enable == true }}
       run: |
         $now = (Get-Date).AddHours(3)
+        $timestamp = $now.ToString('yyyyMMddHHmmss')
         echo "DATE=$($now.ToString('yyyyMMdd'))" >> $env:GITHUB_ENV
         echo "DATETIME=$($now.ToString('yyyy-MM-dd HH:mm'))" >> $env:GITHUB_ENV
-        
-        # Branch adından neon veya main eklerini temizleyip saf sürüm adını tag yapıyoruz (Örn: v1.8.8neon -> v1.8.8)
-        $cleanTag = "${{ matrix.target_branch }}".Replace("neon", "").Replace("main", "")
-        echo "TAGNAME=$cleanTag" >> $env:GITHUB_ENV
+        echo "TAGNAME=$timestamp" >> $env:GITHUB_ENV
 
     - name: Build Windows Executable
       if: ${{ matrix.enable == true }}
       run: |
-        # Go build esnasında main paketindeki currentVersion değişkenine güncel TAGNAME değerini basıyoruz
+        # Saf sayısal timestamp değerini go build ile içindeki currentVersion değişkenine mühürlüyoruz
         go build -ldflags="-s -w -X 'main.currentVersion=${{ env.TAGNAME }}'" -o mesnevi.exe .
 
     - name: Prepare Release Folder
