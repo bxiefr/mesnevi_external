@@ -4,18 +4,20 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"math/rand"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
 	"unicode"
 	"unsafe"
-	"runtime/debug"
 
 	"github.com/lxn/win"
 	"golang.org/x/sys/windows"
@@ -26,6 +28,18 @@ var embeddedOffsets []byte
 
 //go:embed hit.wav
 var embeddedHitSound []byte
+
+// GitHub Güncelleme Ayarları (Kendi repo ve sürüm bilgini buraya yazabilirsin)
+const githubRepo = "bxiefr/mesnevi_external"
+const currentVersion = "v1.8.8"
+
+type GitHubRelease struct {
+	TagName string `json:"tag_name"`
+	Assets  []struct {
+		Name               string `json:"name"`
+		BrowserDownloadURL string `json:"browser_download_url"`
+	} `json:"assets"`
+}
 
 type Matrix [4][4]float32
 
@@ -64,68 +78,67 @@ type Entity struct {
 }
 
 type Offset struct {
-	DwViewMatrix           uintptr `json:"dwViewMatrix"`
-	DwLocalPlayerPawn      uintptr `json:"dwLocalPlayerPawn"`
-	DwEntityList           uintptr `json:"dwEntityList"`
-	M_hPlayerPawn          uintptr `json:"m_hPlayerPawn"`
-	M_iHealth              uintptr `json:"m_iHealth"`
-	M_lifeState            uintptr `json:"m_lifeState"`
-	M_iTeamNum             uintptr `json:"m_iTeamNum"`
-	M_vOldOrigin           uintptr `json:"m_vOldOrigin"`
-	M_pGameSceneNode       uintptr `json:"m_pGameSceneNode"`
-	M_modelState           uintptr `json:"m_modelState"`
-	M_boneArray            uintptr `json:"m_boneArray"`
-	M_nodeToWorld          uintptr `json:"m_nodeToWorld"`
-	M_sSanitizedPlayerName uintptr `json:"m_sSanitizedPlayerName"`
-	M_ArmorValue           uintptr `json:"m_ArmorValue"`
-	M_pBulletServices      uintptr `json:"m_pBulletServices"`
-	M_totalHitsOnServer    uintptr `json:"m_totalHitsOnServer"`
+	DwViewMatrix             uintptr `json:"dwViewMatrix"`
+	DwLocalPlayerPawn        uintptr `json:"dwLocalPlayerPawn"`
+	DwEntityList             uintptr `json:"dwEntityList"`
+	M_hPlayerPawn            uintptr `json:"m_hPlayerPawn"`
+	M_iHealth                uintptr `json:"m_iHealth"`
+	M_lifeState              uintptr `json:"m_lifeState"`
+	M_iTeamNum               uintptr `json:"m_iTeamNum"`
+	M_vOldOrigin             uintptr `json:"m_vOldOrigin"`
+	M_pGameSceneNode         uintptr `json:"m_pGameSceneNode"`
+	M_modelState             uintptr `json:"m_modelState"`
+	M_boneArray              uintptr `json:"m_boneArray"`
+	M_nodeToWorld            uintptr `json:"m_nodeToWorld"`
+	M_sSanitizedPlayerName   uintptr `json:"m_sSanitizedPlayerName"`
+	M_ArmorValue             uintptr `json:"m_ArmorValue"`
+	M_pBulletServices        uintptr `json:"m_pBulletServices"`
+	M_totalHitsOnServer      uintptr `json:"m_totalHitsOnServer"`
 }
 
-// Config Yapısı (Ayarları diske kaydetmek için)
 type Config struct {
-	TeamCheck           bool `json:"teamCheck"`
-	HeadCircle          bool `json:"headCircle"`
-	SkeletonRendering   bool `json:"skeletonRendering"`
-	BoxRendering        bool `json:"boxRendering"`
-	NameRendering       bool `json:"nameRendering"`
-	HealthBarRendering  bool `json:"healthBarRendering"`
-	ArmorBarRendering   bool `json:"armorBarRendering"`
-	HealthTextRendering bool `json:"healthTextRendering"`
-	DistanceRendering   bool `json:"distanceRendering"`
-	HitmarkerRendering  bool `json:"hitmarkerRendering"`
-	HitSoundRendering   bool `json:"hitSoundRendering"`
-	SkeletonColorIndex  int  `json:"skeletonColorIndex"`
+	TeamCheck             bool `json:"teamCheck"`
+	HeadCircle            bool `json:"headCircle"`
+	SkeletonRendering     bool `json:"skeletonRendering"`
+	BoxRendering          bool `json:"boxRendering"`
+	NameRendering         bool `json:"nameRendering"`
+	HealthBarRendering    bool `json:"healthBarRendering"`
+	ArmorBarRendering     bool `json:"armorBarRendering"`
+	HealthTextRendering   bool `json:"healthTextRendering"`
+	DistanceRendering     bool `json:"distanceRendering"`
+	HitmarkerRendering    bool `json:"hitmarkerRendering"`
+	HitSoundRendering     bool `json:"hitSoundRendering"`
+	SkeletonColorIndex    int  `json:"skeletonColorIndex"`
 }
 
 var (
-	cachedScreenWidth  float32
-    cachedScreenHeight float32
-	user32                     = windows.NewLazySystemDLL("user32.dll")
-	getForegroundWindow        = user32.NewProc("GetForegroundWindow")
-	gdi32                      = windows.NewLazySystemDLL("gdi32.dll")
-	kernel32                   = windows.NewLazySystemDLL("kernel32.dll")
-	setPriorityClass           = kernel32.NewProc("SetPriorityClass")
-	winmm                      = windows.NewLazySystemDLL("winmm.dll")
-	getSystemMetrics           = user32.NewProc("GetSystemMetrics")
+	cachedScreenWidth    float32
+	cachedScreenHeight   float32
+	user32               = windows.NewLazySystemDLL("user32.dll")
+	getForegroundWindow  = user32.NewProc("GetForegroundWindow")
+	gdi32                = windows.NewLazySystemDLL("gdi32.dll")
+	kernel32             = windows.NewLazySystemDLL("kernel32.dll")
+	setPriorityClass     = kernel32.NewProc("SetPriorityClass")
+	winmm                = windows.NewLazySystemDLL("winmm.dll")
+	getSystemMetrics     = user32.NewProc("GetSystemMetrics")
 	setLayeredWindowAttributes = user32.NewProc("SetLayeredWindowAttributes")
 	setWindowDisplayAffinity   = user32.NewProc("SetWindowDisplayAffinity")
-	showCursor                 = user32.NewProc("ShowCursor")
-	setTextAlign               = gdi32.NewProc("SetTextAlign")
-	createFont                 = gdi32.NewProc("CreateFontW")
-	createCompatibleDC         = gdi32.NewProc("CreateCompatibleDC")
-	createSolidBrush           = gdi32.NewProc("CreateSolidBrush")
-	createPen                  = gdi32.NewProc("CreatePen")
-	selectObject               = gdi32.NewProc("SelectObject")
-	deleteObject               = gdi32.NewProc("DeleteObject")
-	rectangleProc              = gdi32.NewProc("Rectangle")
-	textOutProc                = gdi32.NewProc("TextOutW")
-	setBkMode                  = gdi32.NewProc("SetBkMode")
-	setTextColor               = gdi32.NewProc("SetTextColor")
-	gdiFlush                   = gdi32.NewProc("GdiFlush")
-	GetAsyncKeyState           = user32.NewProc("GetAsyncKeyState")
-	beepProc                   = kernel32.NewProc("Beep")
-	playSoundProc              = winmm.NewProc("PlaySoundW")
+	showCursor           = user32.NewProc("ShowCursor")
+	setTextAlign         = gdi32.NewProc("SetTextAlign")
+	createFont           = gdi32.NewProc("CreateFontW")
+	createCompatibleDC   = gdi32.NewProc("CreateCompatibleDC")
+	createSolidBrush     = gdi32.NewProc("CreateSolidBrush")
+	createPen            = gdi32.NewProc("CreatePen")
+	selectObject         = gdi32.NewProc("SelectObject")
+	deleteObject         = gdi32.NewProc("DeleteObject")
+	rectangleProc        = gdi32.NewProc("Rectangle")
+	textOutProc          = gdi32.NewProc("TextOutW")
+	setBkMode            = gdi32.NewProc("SetBkMode")
+	setTextColor         = gdi32.NewProc("SetTextColor")
+	gdiFlush             = gdi32.NewProc("GdiFlush")
+	GetAsyncKeyState     = user32.NewProc("GetAsyncKeyState")
+	beepProc             = kernel32.NewProc("Beep")
+	playSoundProc        = winmm.NewProc("PlaySoundW")
 )
 
 const (
@@ -135,48 +148,40 @@ const (
 )
 
 var (
-	teamCheck           bool    = true
-	headCircle          bool    = true
-	skeletonRendering   bool    = true
-	boxRendering        bool    = true
-	nameRendering       bool    = true
-	healthBarRendering  bool    = true
-	armorBarRendering   bool    = true
-	healthTextRendering bool    = true
-	distanceRendering   bool    = true
-	hitmarkerRendering  bool    = true
-	hitSoundRendering   bool    = true
-	menuOpen            bool    = true
-	frameDelay          uint32  = 15
-	currentHue          float64 = 0
+	teamCheck            bool    = true
+	headCircle           bool    = true
+	skeletonRendering    bool    = true
+	boxRendering         bool    = true
+	nameRendering        bool    = true
+	healthBarRendering   bool    = true
+	armorBarRendering    bool    = true
+	healthTextRendering  bool    = true
+	distanceRendering    bool    = true
+	hitmarkerRendering   bool    = true
+	hitSoundRendering    bool    = true
+	menuOpen             bool    = true
+	frameDelay           uint32  = 15
+	currentHue           float64 = 0
 
-	lastHits      int32 = -1
-	lastHitTime   time.Time
-	cachedHitPath string
+	lastHits             int32 = -1
+	lastHitTime          time.Time
+	cachedHitPath        string
 )
 
-const asciiArt = `
-  _____   ___________ _________ _______    _______________    ____.___ 
- /     \  \_   _____//   _____/ \      \   \_   _____/\   \  /   /|   |
-/  \ /  \  |    __)_ \_____  \  /   |   \   |    __)_  \   Y   / |   |
-/    Y    \ |        \/        \/    |    \  |        \  \     /  |   |
-\____|__  /_______  /_______  /\____|__  /_______  /   \___/   |___|
-        \/        \/        \/         \/        \/                  `
-
 var (
-	bgBrush            uintptr
-	redPen             uintptr
-	greenPen           uintptr
-	bluePen            uintptr
-	bonePen            uintptr
-	blueBonePen        uintptr
-	greenBonePen       uintptr
-	redBonePen         uintptr
-	outlinePen         uintptr
-	armorPen           uintptr
-	hitmarkerPen       uintptr
-	skeletonColor      uintptr
-	skeletonColorIndex int
+	bgBrush              uintptr
+	redPen               uintptr
+	greenPen             uintptr
+	bluePen              uintptr
+	bonePen              uintptr
+	blueBonePen          uintptr
+	greenBonePen         uintptr
+	redBonePen           uintptr
+	outlinePen           uintptr
+	armorPen             uintptr
+	hitmarkerPen         uintptr
+	skeletonColor        uintptr
+	skeletonColorIndex   int
 )
 
 func init() {
@@ -184,7 +189,85 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 	debug.SetGCPercent(200)
 	cachedHitPath = extractEmbeddedHitSound()
-	loadConfig() // Program başlarken config dosyasını yükle
+	loadConfig()
+}
+
+// Otomatik Güncelleme Fonksiyonları
+func checkForUpdates() {
+	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", githubRepo)
+	
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get(apiURL)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return
+	}
+
+	var release GitHubRelease
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return
+	}
+
+	if release.TagName != currentVersion {
+		for _, asset := range release.Assets {
+			if asset.Name == "mesnevi.exe" {
+				downloadAndUpdate(asset.BrowserDownloadURL)
+				break
+			}
+		}
+	}
+}
+
+func downloadAndUpdate(downloadURL string) {
+	exePath, err := os.Executable()
+	if err != nil {
+		return
+	}
+
+	tmpPath := exePath + ".tmp"
+	resp, err := http.Get(downloadURL)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	out, err := os.Create(tmpPath)
+	if err != nil {
+		return
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return
+	}
+
+	batchPath := filepath.Join(os.TempDir(), "update.bat")
+	batchContent := fmt.Sprintf(`@echo off
+timeout /t 2 /nobreak > nul
+del /f /q "%s"
+move /y "%s" "%s"
+start "" "%s"
+del "%%~f0"
+`, exePath, tmpPath, exePath, exePath)
+
+	_ = os.WriteFile(batchPath, []byte(batchContent), 0644)
+
+	var sz uintptr = unsafe.Sizeof(syscall.ShellExecuteInfo{})
+	sei := syscall.ShellExecuteInfo{
+		CbSize:       uint32(sz),
+		FMask:        syscall.SEE_MASK_DEFAULT,
+		Hwnd:         0,
+		LpVerb:       syscall.StringToUTF16Ptr("open"),
+		LpFile:       syscall.StringToUTF16Ptr(batchPath),
+		NShow:        syscall.SW_HIDE,
+	}
+	syscall.ShellExecuteEx(&sei)
+	os.Exit(0)
 }
 
 func getConfigPath() string {
@@ -221,7 +304,7 @@ func loadConfig() {
 	filePath := getConfigPath()
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return // Dosya yoksa varsayılan ayarlarla devam et
+		return
 	}
 
 	var cfg Config
@@ -313,7 +396,7 @@ func worldToScreen(viewMatrix Matrix, position Vector3) (float32, float32) {
 	invw := 1.0 / w
 	screenX *= invw
 	screenY *= invw
-    x := cachedScreenWidth / 2
+	x := cachedScreenWidth / 2
 	y := cachedScreenHeight / 2
 	x += 0.5 * screenX * cachedScreenWidth + 0.5
 	y -= 0.5 * screenY * cachedScreenHeight + 0.5
@@ -338,25 +421,25 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		return entities
 	}
 	var (
-		localPlayerP           uintptr
-		localPlayerGameScene   uintptr
+		localPlayerP         uintptr
+		localPlayerGameScene uintptr
 		localPlayerSceneOrigin Vector3
-		localTeam              int32
-		listEntry              uintptr
-		gameScene              uintptr
-		entityController       uintptr
-		entityControllerPawn   uintptr
-		entityPawn             uintptr
-		entityNameAddress      uintptr
-		entityBoneArray        uintptr
-		entityTeam             int32
-		entityHealth           int32
-		entityArmor            int32
-		entityLifeState        int32
-		entityName             string
-		sanitizedNameStr       string
-		entityOrigin           Vector3
-		viewMatrix             Matrix
+		localTeam          int32
+		listEntry          uintptr
+		gameScene          uintptr
+		entityController   uintptr
+		entityControllerPawn uintptr
+		entityPawn         uintptr
+		entityNameAddress  uintptr
+		entityBoneArray    uintptr
+		entityTeam         int32
+		entityHealth       int32
+		entityArmor        int32
+		entityLifeState    int32
+		entityName         string
+		sanitizedNameStr   string
+		entityOrigin       Vector3
+		viewMatrix         Matrix
 	)
 	bones := map[string]int{
 		"head":        6,
@@ -378,10 +461,10 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		"ankle_R":     27,
 	}
 	var (
-		currentBone      Vector3
-		entityHead       Vector3
-		entityHeadTop    Vector3
-		entityHeadBottom Vector3
+		currentBone        Vector3
+		entityHead         Vector3
+		entityHeadTop      Vector3
+		entityHeadBottom   Vector3
 	)
 
 	err = read(procHandle, clientDll+offsets.DwLocalPlayerPawn, &localPlayerP)
@@ -551,27 +634,25 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		}
 
 		if skeletonRendering || headCircle {
-		for boneName, boneIndex := range bones {
-			// Eğer iskelet kapalı ama kafa çemberi açıkse, sadece "head" kemiğini oku, diğerlerini atla
-			if !skeletonRendering && boneName != "head" {
-				continue
-			}
-
-			err = read(procHandle, entityBoneArray+uintptr(boneIndex)*32, &currentBone)
-			if err != nil {
-				return entities
-			}
-			if boneName == "head" {
-				entityHead = currentBone
-				if !skeletonRendering {
-					// Sadece kafa lazımsa ve iskelet çizilmeyecekse döngüyü hemen kır
-					break
+			for boneName, boneIndex := range bones {
+				if !skeletonRendering && boneName != "head" {
+					continue
 				}
+
+				err = read(procHandle, entityBoneArray+uintptr(boneIndex)*32, &currentBone)
+				if err != nil {
+					return entities
+				}
+				if boneName == "head" {
+					entityHead = currentBone
+					if !skeletonRendering {
+						break
+					}
+				}
+				boneX, boneY := worldToScreen(viewMatrix, currentBone)
+				entityBones[boneName] = Vector2{boneX, boneY}
 			}
-			boneX, boneY := worldToScreen(viewMatrix, currentBone)
-			entityBones[boneName] = Vector2{boneX, boneY}
-		}
-  }          
+		}          
 		entityHeadTop = Vector3{entityHead.X, entityHead.Y, entityHead.Z + 7}
 		entityHeadBottom = Vector3{entityHead.X, entityHead.Y, entityHead.Z - 5}
 		screenPosHeadX, screenPosHeadTopY := worldToScreen(viewMatrix, entityHeadTop)
@@ -674,11 +755,6 @@ func renderEntityInfo(hdc win.HDC, tPen uintptr, gPen uintptr, oPen uintptr, hPe
 		win.LineTo(hdc, int32(rect.Right)+1, int32(rect.Bottom)+1)
 		win.LineTo(hdc, int32(rect.Left)+1, int32(rect.Bottom)-1)
 		win.LineTo(hdc, int32(rect.Left)-1, int32(rect.Top)-1)
-		win.MoveToEx(hdc, int(rect.Left)+1, int(rect.Top)+1, nil)
-		win.LineTo(hdc, int32(rect.Right)+1, int32(rect.Top)-1)
-		win.LineTo(hdc, int32(rect.Right)-1, int32(rect.Bottom)-1)
-		win.LineTo(hdc, int32(rect.Left)-1, int32(rect.Bottom)+1)
-		win.LineTo(hdc, int32(rect.Left)+1, int32(rect.Top)+1)
 	}
 
 	if headCircle {
@@ -687,8 +763,6 @@ func renderEntityInfo(hdc win.HDC, tPen uintptr, gPen uintptr, oPen uintptr, hPe
 		win.Ellipse(hdc, int32(headPos.X)-radius-1, int32(headPos.Y)-1, int32(headPos.X)+radius+1, int32(headPos.Z)+1)
 		win.SelectObject(hdc, win.HGDIOBJ(hPen))
 		win.Ellipse(hdc, int32(headPos.X)-radius, int32(headPos.Y), int32(headPos.X)+radius, int32(headPos.Z))
-		win.SelectObject(hdc, win.HGDIOBJ(oPen))
-		win.Ellipse(hdc, int32(headPos.X)-radius+1, int32(headPos.Y)+1, int32(headPos.X)+radius-1, int32(headPos.Z)-1)
 	}
 
 	if healthBarRendering {
@@ -718,13 +792,6 @@ func renderEntityInfo(hdc win.HDC, tPen uintptr, gPen uintptr, oPen uintptr, hPe
 		win.SelectObject(hdc, win.HGDIOBJ(aPen))
 		win.MoveToEx(hdc, int(rect.Right)+4, yPos, nil)
 		win.LineTo(hdc, int32(rect.Right)+4, int32(rect.Bottom)+1)
-
-		win.SelectObject(hdc, win.HGDIOBJ(oPen))
-		win.MoveToEx(hdc, int(rect.Right)+3, int(rect.Top)-1, nil)
-		win.LineTo(hdc, int32(rect.Right)+3, int32(rect.Bottom)+1)
-		win.LineTo(hdc, int32(rect.Right)+5, int32(rect.Bottom)+1)
-		win.LineTo(hdc, int32(rect.Right)+5, int32(rect.Top)-1)
-		win.LineTo(hdc, int32(rect.Right)+3, int32(rect.Top)-1)
 
 		armorText, _ := windows.UTF16PtrFromString(fmt.Sprintf("%d", armor))
 		win.SetTextColor(hdc, win.RGB(byte(0), byte(204), byte(255))) 
@@ -776,7 +843,7 @@ func drawInGameMenu(hdc win.HDC) {
 	selectObject.Call(uintptr(hdc), menuBrush)
 	selectObject.Call(uintptr(hdc), menuBorderPen)
 
-	rectangleProc.Call(uintptr(hdc), 30, 30, 350, 415) // Menü yüksekliği yeni özellik için uzatıldı
+	rectangleProc.Call(uintptr(hdc), 30, 30, 350, 415)
 
 	deleteObject.Call(menuBrush)
 	deleteObject.Call(menuBorderPen)
@@ -924,12 +991,6 @@ func initWindow(screenWidth uintptr, screenHeight uintptr) win.HWND {
 	return hwnd
 }
 
-func readBool(handle windows.Handle, address uintptr) bool {
-    var value bool
-    read(handle, address, &value)
-    return value
-}
-
 func isKeyPressed(vKey int) bool {
 	ret, _, _ := GetAsyncKeyState.Call(uintptr(vKey))
 	return (ret & 0x0001) != 0
@@ -993,7 +1054,7 @@ func listenHotkeys() {
 			saveConfig()
 			playBeep(true)
 		}
-		if isKeyPressed(0x2E) { // VK_DELETE -> PANIC BUTTON (Anında Kapatma)
+		if isKeyPressed(0x2E) { // VK_DELETE -> PANIC BUTTON
 			playBeep(false)
 			os.Exit(0)
 		}
@@ -1007,12 +1068,13 @@ func listenHotkeys() {
 }
 
 func main() {
+	// Program açılır açılmaz arka planda güncellemeyi kontrol et
+	go checkForUpdates()
 
-    setPriorityClass.Call(uintptr(windows.CurrentProcess()), 0x00008000)
+	setPriorityClass.Call(uintptr(windows.CurrentProcess()), 0x00008000)
 	
 	go listenHotkeys()
 
-	// Kaydedilen iskelet rengini başlangıçta ayarla
 	if skeletonColorIndex == 0 {
 		skeletonColor = blueBonePen
 	} else if skeletonColorIndex == 1 {
@@ -1026,8 +1088,8 @@ func main() {
 	screenWidth, _, _ := getSystemMetrics.Call(0)
 	screenHeight, _, _ := getSystemMetrics.Call(1)
 
-    cachedScreenWidth = float32(screenWidth)
-    cachedScreenHeight = float32(screenHeight)
+	cachedScreenWidth = float32(screenWidth)
+	cachedScreenHeight = float32(screenHeight)
 	
 	hwnd := initWindow(screenWidth, screenHeight)
 	if hwnd == 0 {
@@ -1122,8 +1184,6 @@ func main() {
 		win.TranslateMessage(&msg)
 		win.DispatchMessage(&msg)
 
-		//win.SetTimer(hwnd, 1, frameDelay, 0) # disabled for performance
-
 		currentHue = math.Mod(currentHue+4.0, 360)
 
 		hwndForeground, _, _ := getForegroundWindow.Call()
@@ -1157,7 +1217,7 @@ func main() {
 		drawInGameMenu(win.HDC(memhdc))
 
 		win.BitBlt(hdc, 0, 0, int32(screenWidth), int32(screenHeight), win.HDC(memhdc), 0, 0, win.SRCCOPY)
-        gdiFlush.Call()
+		gdiFlush.Call()
 		
 		deleteObject.Call(uintptr(memBitmap))
 		deleteObject.Call(memhdc)
