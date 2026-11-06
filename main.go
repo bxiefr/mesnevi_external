@@ -30,7 +30,7 @@ var embeddedOffsets []byte
 //go:embed hit.wav
 var embeddedHitSound []byte
 
-// GitHub Güncelleme Ayarları (Kendi repo ve sürüm bilgini buraya yazabilirsin)
+// GitHub Güncelleme Ayarları
 const githubRepo = "bxiefr/mesnevi_external"
 const currentVersion = "v1.8.8"
 
@@ -193,6 +193,7 @@ func init() {
 	loadConfig()
 }
 
+// Akıllı Güncelleme Kontrolü ve Kullanıcıya Sorma (Y/N)
 func checkForUpdates() {
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", githubRepo)
 	
@@ -212,19 +213,27 @@ func checkForUpdates() {
 		return
 	}
 
-	// Boş tag kontrolü ekleyelim ki api hatasında tetiklenmesin
-	if release.TagName == "" {
-		return
+	if release.TagName == "" || release.TagName == currentVersion {
+		return // Sürüm aynıysa veya boşsa hiç bulaşma, döngüyü engelle
 	}
 
-	// Sadece GitHub'daki Tag, bizim currentVersion'dan FARKLIYSA VE boş değilse güncelle
-	if release.TagName != currentVersion {
+	// Yeni sürüm bulundu! Konsola kullanıcıya soran metin yazdıralım
+	fmt.Printf("\n[!] Yeni surum bulundu (%s -> %s). Guncellemek ister misin? [Y/N]: ", currentVersion, release.TagName)
+	
+	var choice string
+	_, _ = fmt.Scanln(&choice)
+
+	choice = strings.TrimSpace(strings.ToUpper(choice))
+	if choice == "Y" || choice == "EVET" {
 		for _, asset := range release.Assets {
 			if asset.Name == "mesnevi.exe" {
+				fmt.Println("[*] Guncelleme indiriliyor...")
 				downloadAndUpdate(asset.BrowserDownloadURL)
 				break
 			}
 		}
+	} else {
+		fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
 	}
 }
 
@@ -252,7 +261,6 @@ func downloadAndUpdate(downloadURL string) {
 		return
 	}
 
-	// Eski exe'yi silip yenisini taşıyan ve programı yeniden başlatan batch scripti
 	batchPath := filepath.Join(os.TempDir(), "update.bat")
 	batchContent := fmt.Sprintf(`@echo off
 timeout /t 2 /nobreak > nul
@@ -264,9 +272,8 @@ del "%%~f0"
 
 	_ = os.WriteFile(batchPath, []byte(batchContent), 0644)
 
-	// Batch dosyasını gizli komut satırı olarak çalıştır ve mevcut süreci kapat
+	// Burada konsolu gizlemiyoruz ki kullanıcı güncellemenin bittiğini görebilsin
 	cmd := exec.Command("cmd.exe", "/c", batchPath)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	_ = cmd.Start()
 
 	os.Exit(0)
@@ -1070,8 +1077,8 @@ func listenHotkeys() {
 }
 
 func main() {
-	// Program açılır açılmaz arka planda güncellemeyi kontrol et
-	go checkForUpdates()
+	// Program açılışında bir kere güncelleme kontrolü yap ve kullanıcıya sor
+	checkForUpdates()
 
 	setPriorityClass.Call(uintptr(windows.CurrentProcess()), 0x00008000)
 	
