@@ -28,8 +28,10 @@ jobs:
       matrix:
         include:
           - target_branch: "v1.8.7main"
+            version: "1.8.7"
             enable: ${{ inputs.build_v187 == true || github.event_name == 'push' }}
           - target_branch: "v1.8.8neon"
+            version: "1.8.8"
             enable: ${{ inputs.build_v188 == true || github.event_name == 'push' }}
 
     steps:
@@ -59,11 +61,10 @@ jobs:
       run: |
         $now = (Get-Date).AddHours(3)
         $timestamp = $now.ToString('yyyyMMddHHmmss')
-        $branchTag = "${{ matrix.target_branch }}-$timestamp"
         
         echo "DATE=$($now.ToString('yyyyMMdd'))" >> $env:GITHUB_ENV
         echo "DATETIME=$($now.ToString('yyyy-MM-dd HH:mm'))" >> $env:GITHUB_ENV
-        echo "TAGNAME=$branchTag" >> $env:GITHUB_ENV
+        echo "TAGNAME=${{ matrix.version }}" >> $env:GITHUB_ENV
         echo "PURE_TIMESTAMP=$timestamp" >> $env:GITHUB_ENV
       shell: pwsh
 
@@ -87,8 +88,12 @@ jobs:
       run: |
         $releaseBody = "### Build Details`n- **Build Time:** ${{ env.DATETIME }}`n- **Source Branch:** `${{ matrix.target_branch }}` `n- **Status:** Automated Native CLI Build"
         
+        # Eğer daha önce aynı tag oluşturulduysa çakışmayı önlemek için eskisini siliyoruz veya üzerine yazıyoruz
+        gh release delete "${{ env.TAGNAME }}" --yes 2>$null
+        git push origin --delete "${{ env.TAGNAME }}" 2>$null
+
         gh release create "${{ env.TAGNAME }}" `
-          --title "Build ${{ env.DATETIME }} (${{ matrix.target_branch }})" `
+          --title "Release v${{ env.TAGNAME }} (${{ matrix.target_branch }})" `
           --notes "$releaseBody" `
           release_folder/mesnevi.exe
       shell: pwsh
