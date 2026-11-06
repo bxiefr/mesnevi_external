@@ -58,15 +58,22 @@ jobs:
       run: |
         $now = (Get-Date).AddHours(3)
         $timestamp = $now.ToString('yyyyMMddHHmmss')
+        
+        # Branch ismine göre tag'i benzersiz yapıyoruz ki çakışma olmasın!
+        $branchTag = "${{ matrix.target_branch }}-$timestamp"
+        
         echo "DATE=$($now.ToString('yyyyMMdd'))" >> $env:GITHUB_ENV
         echo "DATETIME=$($now.ToString('yyyy-MM-dd HH:mm'))" >> $env:GITHUB_ENV
-        echo "TAGNAME=$timestamp" >> $env:GITHUB_ENV
+        echo "TAGNAME=$branchTag" >> $env:GITHUB_ENV
+        
+        # Go build için saf sayısal timestamp'i ayrıca kaydediyoruz
+        echo "PURE_TIMESTAMP=$timestamp" >> $env:GITHUB_ENV
 
     - name: Build Windows Executable
       if: ${{ matrix.enable == true }}
       run: |
-        # Saf sayısal timestamp değerini go build ile içindeki currentVersion değişkenine mühürlüyoruz
-        go build -ldflags="-s -w -X 'main.currentVersion=${{ env.TAGNAME }}'" -o mesnevi.exe .
+        # Go içine saf sayısal timestamp mühürleniyor (güncelleme kıyaslaması bozulmasın diye)
+        go build -ldflags="-s -w -X 'main.currentVersion=${{ env.PURE_TIMESTAMP }}'" -o mesnevi.exe .
 
     - name: Prepare Release Folder
       if: ${{ matrix.enable == true }}
