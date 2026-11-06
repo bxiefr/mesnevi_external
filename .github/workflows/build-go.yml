@@ -59,7 +59,10 @@ jobs:
         $now = (Get-Date).AddHours(3)
         echo "DATE=$($now.ToString('yyyyMMdd'))" >> $env:GITHUB_ENV
         echo "DATETIME=$($now.ToString('yyyy-MM-dd HH:mm'))" >> $env:GITHUB_ENV
-        echo "TAGNAME=v$($now.ToString('yyyyMMdd-HHmmss'))-${{ matrix.target_branch }}" >> $env:GITHUB_ENV
+        
+        # Branch adından neon veya main eklerini temizleyip saf sürüm adını tag yapıyoruz (Örn: v1.8.8neon -> v1.8.8)
+        $cleanTag = "${{ matrix.target_branch }}".Replace("neon", "").Replace("main", "")
+        echo "TAGNAME=$cleanTag" >> $env:GITHUB_ENV
 
     - name: Build Windows Executable
       if: ${{ matrix.enable == true }}
