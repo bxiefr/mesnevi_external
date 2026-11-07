@@ -3,7 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MESNEVI External | CS2 Memory & Visualization Engine</title>
+<title>MESNEVI External | CS2 Memory &amp; Visualization Engine</title>
+<meta name="description" content="mesnevi_external: Go ile geliştirilmiş ultra hafif Win32 GDI arayüzü. Dinamik offset senkronizasyonu ile güncel sürümleri incele ve indir.">
+<meta name="robots" content="index, follow">
+<meta name="author" content="bxiefr">
+<meta name="theme-color" content="#1a0b2e">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MESNEVI External">
+<meta property="og:title" content="mesnevi_external">
+<meta property="og:description" content="Go ile geliştirilmiş ultra hafif Win32 GDI arayüzü. Dinamik offset senkronizasyonu ile güncel sürümleri incele ve indir.">
+<meta property="og:locale" content="tr_TR">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="mesnevi_external">
+<meta name="twitter:description" content="Go ile geliştirilmiş ultra hafif Win32 GDI arayüzü. Dinamik offset senkronizasyonu ile güncel sürümleri incele ve indir.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23fbbf24'/%3E%3Cstop offset='1' stop-color='%23f43f5e'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ctext x='32' y='44' font-family='Arial' font-size='36' font-weight='700' text-anchor='middle' fill='white'%3EM%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -30,6 +44,7 @@
     --glow: rgba(251, 146, 60, 0.35);
     --shadow: 0 24px 48px -18px rgba(10, 2, 20, 0.7);
     --footer: rgba(18, 6, 31, 0.85);
+    --bar: rgba(26, 11, 46, 0.72);
 }
 
 :root[data-theme="golden"] {
@@ -54,6 +69,7 @@
     --glow: rgba(194, 65, 12, 0.28);
     --shadow: 0 24px 48px -18px rgba(124, 45, 18, 0.35);
     --footer: rgba(255, 237, 213, 0.9);
+    --bar: rgba(255, 237, 213, 0.72);
 }
 
 * {
@@ -153,21 +169,57 @@ body {
     to { opacity: 0.9; }
 }
 
-header {
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--bar);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(16px);
+}
+
+.topbar-inner {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 24px;
+    padding: 14px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 16px;
+    gap: 12px 16px;
+}
+
+.menu {
+    display: flex;
+    gap: 6px;
+}
+
+.menu a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 999px;
+    transition: color 0.2s, background 0.2s;
+}
+
+.menu a:hover {
+    color: var(--text);
+    background: var(--card-soft);
+}
+
+.menu a.active {
+    color: var(--text);
+    background: var(--glow);
 }
 
 .brand {
     display: flex;
     align-items: center;
     gap: 14px;
+    color: inherit;
+    text-decoration: none;
 }
 
 .brand-logo {
@@ -291,6 +343,7 @@ header {
 }
 
 .section {
+    scroll-margin-top: 90px;
     max-width: 1100px;
     margin: 0 auto 50px;
     padding: 0 24px;
@@ -476,9 +529,27 @@ footer {
     backdrop-filter: blur(12px);
 }
 
+.reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+    transition-delay: var(--delay, 0s);
+}
+
+.reveal.visible {
+    opacity: 1;
+    transform: none;
+}
+
 @media (max-width: 760px) {
     .stats-grid {
         grid-template-columns: 1fr;
+    }
+
+    .menu {
+        order: 3;
+        width: 100%;
+        justify-content: center;
     }
 
     .panel {
@@ -489,6 +560,12 @@ footer {
     .sun,
     .stars {
         animation: none;
+    }
+
+    .reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
     }
 }
 </style>
@@ -505,16 +582,22 @@ footer {
     </svg>
 </div>
 
-<header>
-    <div class="brand">
-        <div class="brand-logo">M</div>
-        <div class="brand-name">MESNEVI External</div>
+<header class="topbar">
+    <div class="topbar-inner">
+        <a class="brand" href="#">
+            <div class="brand-logo">M</div>
+            <div class="brand-name">MESNEVI External</div>
+        </a>
+        <nav class="menu">
+            <a href="#download" data-i18n="navDownload"></a>
+            <a href="#faq" data-i18n="navFaq"></a>
+        </nav>
+        <div class="header-nav">
+            <button class="pill" id="langBtn" type="button">🌐 <span id="langLabel">EN</span></button>
+            <button class="pill" id="themeBtn" type="button"><span id="themeIcon">🌅</span> <span id="themeLabel"></span></button>
+            <a class="pill" href="https://github.com/bxiefr/mesnevi_external" target="_blank" rel="noopener">⚡ GitHub</a>
+        </div>
     </div>
-    <nav class="header-nav">
-        <button class="pill" id="langBtn" type="button">🌐 <span id="langLabel">EN</span></button>
-        <button class="pill" id="themeBtn" type="button"><span id="themeIcon">🌅</span> <span id="themeLabel"></span></button>
-        <a class="pill" href="https://github.com/bxiefr/mesnevi_external" target="_blank" rel="noopener">⚡ GitHub</a>
-    </nav>
 </header>
 
 <main>
@@ -584,6 +667,8 @@ const DICT = {
         inspectDownload: "İncele & İndir",
         unknownDate: "Bilinmiyor",
         fetchError: "Veriler çekilemedi.",
+        navDownload: "İndir",
+        navFaq: "SSS",
         faqTitle: "SIKÇA SORULAN SORULAR",
         faqDesc: "Merak edilenler ve kısa cevapları",
         faq: [
@@ -634,6 +719,8 @@ const DICT = {
         inspectDownload: "Inspect & Download",
         unknownDate: "Unknown",
         fetchError: "Failed to fetch repository data.",
+        navDownload: "Download",
+        navFaq: "FAQ",
         faqTitle: "FREQUENTLY ASKED QUESTIONS",
         faqDesc: "Common questions with short answers",
         faq: [
@@ -836,7 +923,39 @@ document.getElementById("themeBtn").addEventListener("click", () => {
     renderTheme();
 });
 
+function setupReveal() {
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add("visible");
+            observer.unobserve(entry.target);
+        });
+    }, { threshold: 0.12 });
+
+    document.querySelectorAll(".hero > *, .stat-card, .panel").forEach((node, index) => {
+        node.classList.add("reveal");
+        node.style.setProperty("--delay", `${(index % 3) * 0.12}s`);
+        observer.observe(node);
+    });
+}
+
+function setupMenuSpy() {
+    const links = document.querySelectorAll(".menu a");
+    const spy = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            links.forEach(link => {
+                link.classList.toggle("active", link.getAttribute("href") === `#${entry.target.id}`);
+            });
+        });
+    }, { rootMargin: "-40% 0px -55% 0px" });
+
+    document.querySelectorAll("section[id]").forEach(section => spy.observe(section));
+}
+
 renderAll();
+setupReveal();
+setupMenuSpy();
 loadBranches();
 loadOffsetDate();
 </script>
