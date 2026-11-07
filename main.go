@@ -862,20 +862,25 @@ func renderEntityInfo(hdc win.HDC, tPen uintptr, gPen uintptr, oPen uintptr, hPe
 	}
 
 	if nameRendering {
-		text, _ := windows.UTF16PtrFromString(name)
-		win.SetTextColor(hdc, win.RGB(byte(255), byte(255), byte(255)))
-		setTextAlign.Call(uintptr(hdc), 0x00000006)
-		win.TextOut(hdc, int32(rect.Left)+int32((int32(rect.Right)-int32(rect.Left))/2), int32(rect.Top)-14, text, int32(len(name)))
+		utf16Name, err := windows.UTF16FromString(name)
+		if err == nil && len(utf16Name) > 1 {
+			win.SetTextColor(hdc, win.RGB(byte(255), byte(255), byte(255)))
+			setTextAlign.Call(uintptr(hdc), 0x00000006) // TA_CENTER
+			centerX := int32(rect.Left) + int32((int32(rect.Right)-int32(rect.Left))/2)
+			win.TextOut(hdc, centerX, int32(rect.Top)-14, &utf16Name[0], int32(len(utf16Name)-1))
+		}
 	}
 
 	if distanceRendering {
 		distStr := fmt.Sprintf("%.0fm", distance)
-		text, _ := windows.UTF16PtrFromString(distStr)
-		win.SetTextColor(hdc, win.RGB(byte(255), byte(255), byte(150)))
-		setTextAlign.Call(uintptr(hdc), 0x00000006)
-		win.TextOut(hdc, int32(rect.Left)+int32((int32(rect.Right)-int32(rect.Left))/2), int32(rect.Bottom)+2, text, int32(len(distStr)))
+		utf16Dist, err := windows.UTF16FromString(distStr)
+		if err == nil && len(utf16Dist) > 1 {
+			win.SetTextColor(hdc, win.RGB(byte(255), byte(255), byte(150)))
+			setTextAlign.Call(uintptr(hdc), 0x00000006) // TA_CENTER
+			centerX := int32(rect.Left) + int32((int32(rect.Right)-int32(rect.Left))/2)
+			win.TextOut(hdc, centerX, int32(rect.Bottom)+2, &utf16Dist[0], int32(len(utf16Dist)-1))
+		}
 	}
-}
 
 func drawInGameMenu(hdc win.HDC) {
 	if !menuOpen {
