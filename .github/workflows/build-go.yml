@@ -60,14 +60,13 @@ jobs:
       run: |
         $now = (Get-Date).AddHours(3)
         echo "DATETIME=$($now.ToString('yyyy-MM-dd HH:mm'))" >> $env:GITHUB_ENV
+        echo "BUILDSTAMP=$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())" >> $env:GITHUB_ENV
         echo "TAGNAME=${{ matrix.version }}" >> $env:GITHUB_ENV
-      shell: pwsh
 
     - name: Build Windows Executable
       if: ${{ matrix.enable == true }}
       run: |
-        go build -ldflags="-s -w -X 'main.currentVersion=${{ matrix.version }}'" -o mesnevi.exe .
-      shell: pwsh
+        go build -ldflags="-s -w -X 'main.currentVersion=${{ matrix.version }}' -X 'main.buildStamp=${{ env.BUILDSTAMP }}'" -o mesnevi.exe .
 
     - name: Prepare Release Folder
       if: ${{ matrix.enable == true }}
@@ -85,6 +84,7 @@ jobs:
         ### Build Details
         - **Build Time:** ${{ env.DATETIME }}
         - **Source Branch:** ${{ matrix.target_branch }}
+        - BuildStamp: ${{ env.BUILDSTAMP }}
         "@
 
         gh release delete "${{ env.TAGNAME }}" --yes 2>$null
