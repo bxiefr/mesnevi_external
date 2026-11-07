@@ -83,8 +83,8 @@ jobs:
       run: |
         $releaseBody = "### Build Details`n- **Build Time:** ${{ env.DATETIME }}`n- **Source Branch:** `${{ matrix.target_branch }}`"
         
-        gh release delete "${{ env.TAGNAME }}" --yes 2>$null
-        git push origin --delete "${{ env.TAGNAME }}" 2>$null
+        try { gh release delete "${{ env.TAGNAME }}" --yes } catch {}
+        try { git push origin --delete "${{ env.TAGNAME }}" } catch {}
 
         gh release create "${{ env.TAGNAME }}" --title "Release v${{ env.TAGNAME }} (${{ matrix.target_branch }})" --notes "$releaseBody" release_folder/mesnevi.exe
       shell: pwsh
