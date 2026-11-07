@@ -86,8 +86,5 @@ jobs:
         gh release delete "${{ env.TAGNAME }}" --yes 2>$null
         git push origin --delete "${{ env.TAGNAME }}" 2>$null
 
-        gh release create "${{ env.TAGNAME }}" `
-          --title "Release v${{ env.TAGNAME }} (${{ matrix.target_branch }})" `
-          --notes "$releaseBody" `
-          release_folder/mesnevi.exe
+        gh release create "${{ env.TAGNAME }}" --title "Release v${{ env.TAGNAME }} (${{ matrix.target_branch }})" --notes "$releaseBody" release_folder/mesnevi.exe
       shell: pwsh
