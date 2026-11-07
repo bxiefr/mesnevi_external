@@ -207,7 +207,7 @@ func checkForUpdates() {
 		return
 	}
 
-var release GitHubRelease
+	var release GitHubRelease
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return
 	}
@@ -216,16 +216,14 @@ var release GitHubRelease
 		return
 	}
 
-	// Sayısal parse işlemine gerek yok, doğrudan string olarak karşılaştırıyoruz!
 	remoteVersion := release.TagName
-	localVersion := localVersion
 
 	fmt.Printf("[DEBUG] GitHub'dan gelen TagName (Remote): '%s'\n", remoteVersion)
-	fmt.Printf("[DEBUG] Programin icindeki Local Version: '%s'\n", localVersion)
+	fmt.Printf("[DEBUG] Programin icindeki Local Version: '%s'\n", currentVersion)
 
-	// Eğer local versiyon henüz derlemede mühürlenmemişse veya farklıysa güncellemeyi tetikle
-	if remoteVersion != localVersion {
-		fmt.Printf("\n[!] Yeni surum bulundu (%s -> %s). Guncellemek ister misin? [Y/N]: ", localVersion, remoteVersion)
+	// GitHub'dan gelen sürüm ile lokaldeki (ldflags ile enjekte edilen) sürümü karşılaştır
+	if remoteVersion != currentVersion {
+		fmt.Printf("\n[!] Yeni surum bulundu (%s -> %s). Guncellemek ister misin? [Y/N]: ", currentVersion, remoteVersion)
 
 		var choice string
 		_, _ = fmt.Scanln(&choice)
@@ -244,7 +242,7 @@ var release GitHubRelease
 		}
 	} else {
 		fmt.Println("[*] Hile guncel. Baslatiliyor...")
-    }
+	}
 }
 
 func downloadAndUpdate(downloadURL string) {
