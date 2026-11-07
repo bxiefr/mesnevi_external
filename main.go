@@ -901,8 +901,13 @@ func drawInGameMenu(hdc win.HDC) {
 
 	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 255, 255)))
 	
-	titleStr, _ := windows.UTF16PtrFromString("--- MESNEVI EXTERNAL ---")
-	textOutProc.Call(uintptr(hdc), 50, 45, uintptr(unsafe.Pointer(titleStr)), uintptr(len("--- MESNEVI EXTERNAL ---")))
+	title := fmt.Sprintf("--- MESNEVI EXTERNAL v%s ---", currentVersion)
+    titleUTF16, _ := windows.UTF16FromString(title)
+    textOutProc.Call(
+	uintptr(hdc), 50, 45,
+	uintptr(unsafe.Pointer(&titleUTF16[0])),
+	uintptr(len(titleUTF16)-1), // sondaki null karakteri sayma
+)
 
 	colorNames := []string{"MAVİ", "YEŞİL", "KIRMIZI"}
 	currentColor := colorNames[skeletonColorIndex]
