@@ -76,7 +76,7 @@ jobs:
         copy mesnevi.exe release_folder\
       shell: pwsh
 
-      - name: Create GitHub Release
+    - name: Create GitHub Release
       if: ${{ matrix.enable == true }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
