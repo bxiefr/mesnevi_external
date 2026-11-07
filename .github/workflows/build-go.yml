@@ -37,7 +37,7 @@ jobs:
     steps:
     - name: Check if branch is enabled
       if: ${{ matrix.enable == false }}
-      run: echo "Bu branch secilmedi, atlanıyor..."
+      run: echo "Bu branch seçilmedi, atlanıyor..."
 
     - name: Clone and Checkout Branch
       if: ${{ matrix.enable == true }}
@@ -47,8 +47,7 @@ jobs:
 
     - name: Verify Go Installation
       if: ${{ matrix.enable == true }}
-      run: |
-        go version
+      run: go version
       shell: pwsh
 
     - name: Tidy Dependencies
@@ -56,22 +55,18 @@ jobs:
       run: go mod tidy
       shell: pwsh
 
-    - name: Get current date, time and source info
+    - name: Set Environment Info
       if: ${{ matrix.enable == true }}
       run: |
         $now = (Get-Date).AddHours(3)
-        $timestamp = $now.ToString('yyyyMMddHHmmss')
-        
-        echo "DATE=$($now.ToString('yyyyMMdd'))" >> $env:GITHUB_ENV
         echo "DATETIME=$($now.ToString('yyyy-MM-dd HH:mm'))" >> $env:GITHUB_ENV
         echo "TAGNAME=${{ matrix.version }}" >> $env:GITHUB_ENV
-        echo "PURE_TIMESTAMP=$timestamp" >> $env:GITHUB_ENV
       shell: pwsh
 
     - name: Build Windows Executable
       if: ${{ matrix.enable == true }}
       run: |
-        go build -ldflags="-s -w -X 'main.currentVersion=${{ env.PURE_TIMESTAMP }}'" -o mesnevi.exe .
+        go build -ldflags="-s -w -X 'main.currentVersion=${{ matrix.version }}'" -o mesnevi.exe .
       shell: pwsh
 
     - name: Prepare Release Folder
@@ -81,14 +76,13 @@ jobs:
         copy mesnevi.exe release_folder\
       shell: pwsh
 
-    - name: Create GitHub Release via Native GH CLI
+    - name: Create GitHub Release
       if: ${{ matrix.enable == true }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        $releaseBody = "### Build Details`n- **Build Time:** ${{ env.DATETIME }}`n- **Source Branch:** `${{ matrix.target_branch }}` `n- **Status:** Automated Native CLI Build"
+        $releaseBody = "### Build Details`n- **Build Time:** ${{ env.DATETIME }}`n- **Source Branch:** `${{ matrix.target_branch }}`"
         
-        # Eğer daha önce aynı tag oluşturulduysa çakışmayı önlemek için eskisini siliyoruz veya üzerine yazıyoruz
         gh release delete "${{ env.TAGNAME }}" --yes 2>$null
         git push origin --delete "${{ env.TAGNAME }}" 2>$null
 
