@@ -32,6 +32,7 @@ var embeddedHitSound []byte
 
 // GitHub Güncelleme Ayarları
 const githubRepo = "bxiefr/mesnevi_external"
+var currentVersion = "dev"
 
 type GitHubRelease struct {
 	TagName string `json:"tag_name"`
