@@ -881,6 +881,7 @@ func renderEntityInfo(hdc win.HDC, tPen uintptr, gPen uintptr, oPen uintptr, hPe
 			win.TextOut(hdc, centerX, int32(rect.Bottom)+2, &utf16Dist[0], int32(len(utf16Dist)-1))
 		}
 	}
+}
 
 func drawInGameMenu(hdc win.HDC) {
 	if !menuOpen {
