@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MESNEVI External | CS2 Memory & Visualization Engine</title>
+    <title>MESNEVI External | CS2 Memory & Telemetry Engine</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -334,59 +334,6 @@
             box-shadow: 0 4px 15px var(--accent-glow);
         }
 
-        /* Hotkeys List */
-        .hotkeys-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            max-width: 700px;
-            margin: 0 auto;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .hotkey-row {
-            background: rgba(125, 125, 125, 0.04);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 12px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 0.95rem;
-        }
-
-        .hotkey-row:hover {
-            border-color: var(--border-accent);
-        }
-
-        .key-badge {
-            color: var(--accent-blue);
-            font-weight: 700;
-            min-width: 65px;
-        }
-
-        .key-name {
-            flex-grow: 1;
-            color: var(--text-primary);
-            padding-left: 15px;
-        }
-
-        .key-options {
-            color: var(--accent-purple);
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .hotkey-row.end-key {
-            border-color: rgba(239, 68, 68, 0.4);
-            background: rgba(239, 68, 68, 0.03);
-        }
-
-        .hotkey-row.end-key .key-badge,
-        .hotkey-row.end-key .key-name {
-            color: #ef4444;
-        }
-
         /* Footer */
         footer {
             border-top: 1px solid var(--border-color);
@@ -408,7 +355,7 @@
     <header>
         <div class="brand">
             <div class="brand-logo">M</div>
-            <div class="brand-name">MESNEVI External</div>
+            <div class="brand-name">MESNEVI Engine</div>
         </div>
         <div class="header-nav">
             <button class="lang-toggle" onclick="toggleLanguage()">
@@ -428,8 +375,8 @@
             <div class="badge">
                 <span class="badge-dot"></span> <span data-i18n="badgeText">Otomatik Senkronize CS2 Bellek Mimarisi</span>
             </div>
-            <h1 data-i18n="heroTitle">Counter-Strike 2 External Görselleştirme Motoru</h1>
-            <p data-i18n="heroDesc">Go dili ile geliştirilmiş ultra hafif Win32 GDI arayüzü. Dinamik offset senkronizasyonu ile tam uyumlu performans.</p>
+            <h1 data-i18n="heroTitle">Counter-Strike 2 External Telemetri ve Analiz Motoru</h1>
+            <p data-i18n="heroDesc">Go dili ile geliştirilmiş ultra hafif Win32 GDI arayüzü. Dinamik offset senkronizasyonu ile tam uyumlu performans analitik motoru.</p>
         </section>
 
         <!-- Dynamic Stats -->
@@ -463,68 +410,10 @@
                 </div>
             </div>
         </section>
-
-        <!-- Hotkeys Guide -->
-        <section class="section-container">
-            <div class="card-main">
-                <div class="card-header">
-                    <h2 data-i18n="hotkeysTitle">KISAYOL TUŞLARI (HOTKEYS)</h2>
-                    <p data-i18n="hotkeysDesc">Yazılım içi kontrol tuşları ve işlevleri</p>
-                </div>
-
-                <div class="hotkeys-list">
-                    <div class="hotkey-row">
-                        <span class="key-badge">[F1]</span>
-                        <span class="key-name" data-i18n="hkBox">Çerçeve Görselleştirme (Box ESP)</span>
-                    </div>
-                    <div class="hotkey-row">
-                        <span class="key-badge">[F2]</span>
-                        <span class="key-name" data-i18n="hkSkel">İskelet Çizimi (Skeleton ESP)</span>
-                    </div>
-                    <div class="hotkey-row">
-                        <span class="key-badge">[F3]</span>
-                        <span class="key-name" data-i18n="hkHead">Kafa Hedef Halkası (Head Circle)</span>
-                    </div>
-                    <div class="hotkey-row">
-                        <span class="key-badge">[F4]</span>
-                        <span class="key-name" data-i18n="hkTeam">Takım Filtresi (Team Check)</span>
-                    </div>
-                    <div class="hotkey-row">
-                        <span class="key-badge">[F5]</span>
-                        <span class="key-name" data-i18n="hkHealth">Sağlık Göstergesi (Health Bar)</span>
-                    </div>
-                    <div class="hotkey-row">
-                        <span class="key-badge">[F6]</span>
-                        <span class="key-name" data-i18n="hkName">Oyuncu İsmi Etiketi (Player Name)</span>
-                    </div>
-                    <div class="hotkey-row">
-                        <span class="key-badge">[F7]</span>
-                        <span class="key-name" data-i18n="hkDist">Mesafe Ölçer (Distance Display)</span>
-                    </div>
-                    <div class="hotkey-row">
-                        <span class="key-badge">[F8]</span>
-                        <span class="key-name" data-i18n="hkColor">İskelet Rengi (Skeleton Color)</span>
-                        <span class="key-options" data-i18n="hkColors">MAVİ / YEŞİL / KIRMIZI</span>
-                    </div>
-                    <div class="hotkey-row">
-                        <span class="key-badge">[F9]</span>
-                        <span class="key-name" data-i18n="hkArmor">Zırh Göstergesi (Armor Bar)</span>
-                    </div>
-                    <div class="hotkey-row">
-                        <span class="key-badge">[F10]</span>
-                        <span class="key-name" data-i18n="hkHit">Vuruş İşaretçisi & Ses (Hitmarker & Sound)</span>
-                    </div>
-                    <div class="hotkey-row end-key">
-                        <span class="key-badge">[END]</span>
-                        <span class="key-name" data-i18n="hkClose">Uygulamayı Kapat (Close Process)</span>
-                    </div>
-                </div>
-            </div>
-        </section>
     </main>
 
     <footer>
-        <p>&copy; 2026 MESNEVI External | CS2 Memory & Visualization Engine</p>
+        <p>&copy; 2026 MESNEVI Engine | CS2 Memory & Telemetry Engine</p>
     </footer>
 
     <script>
@@ -537,8 +426,8 @@
                 themeLight: "Aydınlık Mod",
                 themeDark: "Karanlık Mod",
                 badgeText: "Otomatik Senkronize CS2 Bellek Mimarisi",
-                heroTitle: "Counter-Strike 2 External Görselleştirme Motoru",
-                heroDesc: "Go dili ile geliştirilmiş ultra hafif Win32 GDI arayüzü. Dinamik offset senkronizasyonu ile tam uyumlu performans.",
+                heroTitle: "Counter-Strike 2 External Telemetri ve Analiz Motoru",
+                heroDesc: "Go dili ile geliştirilmiş ultra hafif Win32 GDI arayüzü. Dinamik offset senkronizasyonu ile tam uyumlu performans analitik motoru.",
                 loading: "Yükleniyor...",
                 statOffset: "Son Offset Güncellemesi",
                 statEngine: "Derleme Motoru",
@@ -547,20 +436,6 @@
                 buildsTitle: "Sürümler ve Derlemeler",
                 buildsDesc: "CI/CD otomasyonu tarafından güncellenen aktif dallar (branches):",
                 githubLoading: "GitHub verileri çekiliyor...",
-                hotkeysTitle: "KISAYOL TUŞLARI (HOTKEYS)",
-                hotkeysDesc: "Yazılım içi kontrol tuşları ve işlevleri",
-                hkBox: "Çerçeve Görselleştirme (Box ESP)",
-                hkSkel: "İskelet Çizimi (Skeleton ESP)",
-                hkHead: "Kafa Hedef Halkası (Head Circle)",
-                hkTeam: "Takım Filtresi (Team Check)",
-                hkHealth: "Sağlık Göstergesi (Health Bar)",
-                hkName: "Oyuncu İsmi Etiketi (Player Name)",
-                hkDist: "Mesafe Ölçer (Distance Display)",
-                hkColor: "İskelet Rengi (Skeleton Color)",
-                hkColors: "MAVİ / YEŞİL / KIRMIZI",
-                hkArmor: "Zırh Göstergesi (Armor Bar)",
-                hkHit: "Vuruş İşaretçisi & Ses (Hitmarker & Sound)",
-                hkClose: "Uygulamayı Kapat (Close Process)",
                 tagDefault: "Varsayılan",
                 lastUpdate: "Son Güncelleme:",
                 inspectDownload: "İncele & İndir",
@@ -572,8 +447,8 @@
                 themeLight: "Light Mode",
                 themeDark: "Dark Mode",
                 badgeText: "Auto-Synced CS2 Memory Architecture",
-                heroTitle: "Counter-Strike 2 External Visualization Engine",
-                heroDesc: "Ultra-lightweight Win32 GDI overlay interface built with Go. Fully compatible performance powered by dynamic offset synchronization.",
+                heroTitle: "Counter-Strike 2 External Telemetry & Analytics Engine",
+                heroDesc: "Ultra-lightweight Win32 GDI analysis interface built with Go. Fully compatible performance powered by dynamic offset synchronization.",
                 loading: "Loading...",
                 statOffset: "Last Offset Sync",
                 statEngine: "Build Engine",
@@ -582,20 +457,6 @@
                 buildsTitle: "Releases & Builds",
                 buildsDesc: "Active branches updated automatically via CI/CD pipelines:",
                 githubLoading: "Fetching GitHub repository data...",
-                hotkeysTitle: "HOTKEYS GUIDE",
-                hotkeysDesc: "Application key bindings and core functions",
-                hkBox: "Bounding Box Overlay (Box ESP)",
-                hkSkel: "Bone Structure (Skeleton ESP)",
-                hkHead: "Target Head Indicator (Head Circle)",
-                hkTeam: "Faction Filter (Team Check)",
-                hkHealth: "Vitality Gauge (Health Bar)",
-                hkName: "Player Identity Tag (Player Name)",
-                hkDist: "Telemetry Distance (Distance Display)",
-                hkColor: "Bone Color Scheme (Skeleton Color)",
-                hkColors: "BLUE / GREEN / RED",
-                hkArmor: "Armor Gauge (Armor Bar)",
-                hkHit: "Hitmarker & Acoustic Feedback",
-                hkClose: "Terminate Process (Close App)",
                 tagDefault: "Default",
                 lastUpdate: "Last Update:",
                 inspectDownload: "Inspect & Download",
@@ -619,11 +480,9 @@
                 }
             });
 
-            // Tema buton yazısını güncelle
             const currentTheme = document.documentElement.getAttribute("data-theme");
             updateThemeUI(currentTheme);
 
-            // GitHub verilerini yeniden render et
             loadBranches();
             loadLastOffsetTime();
         }
@@ -633,7 +492,6 @@
             applyLanguage(nextLang);
         }
 
-        // Tema Yönetimi
         function toggleTheme() {
             const html = document.documentElement;
             const currentTheme = html.getAttribute("data-theme");
@@ -661,7 +519,6 @@
         document.documentElement.setAttribute("data-theme", savedTheme);
         updateThemeUI(savedTheme);
 
-        // GitHub Branch Çekme Fonksiyonu
         async function loadBranches() {
             const branchesList = document.getElementById('branchesList');
             const langDict = i18n[currentLang];
@@ -710,7 +567,6 @@
             }
         }
 
-        // Son Offset Zamanını Çekme
         async function loadLastOffsetTime() {
             const statBox = document.getElementById('lastOffsetTime');
             const langDict = i18n[currentLang];
@@ -734,7 +590,6 @@
             }
         }
 
-        // Sayfa Yüklendiğinde Dili Uygula
         applyLanguage(currentLang);
     </script>
 </body>
