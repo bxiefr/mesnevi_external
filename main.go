@@ -644,18 +644,34 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 			entityArmor = 0
 		}
 
-		err = read(procHandle, entityController+offsets.M_sSanitizedPlayerName, &entityNameAddress)
+        err = read(procHandle, entityController+offsets.M_sSanitizedPlayerName, &entityNameAddress)
 		if err != nil {
 			return entities
 		}
-
-		err = read(procHandle, entityNameAddress, &entityName)
-		if err != nil {
-			return entities
-		}
-		if entityName == "" {
+		if entityNameAddress == 0 {
 			continue
 		}
+
+		// İsmi güvenli bir şekilde bayt tamponu olarak okuyoruz (çöp karakterleri önlemek için)
+		nameBuf := make([]byte, 64)
+		var bytesRead uintptr
+		err = windows.ReadProcessMemory(procHandle, entityNameAddress, &nameBuf[0], uintptr(len(nameBuf)), &bytesRead)
+		if err != nil {
+			continue
+		}
+
+		// Null-terminator (\x00) karakterini bulup ismin gerçek boy sınırını çiziyoruz
+		endIdx := len(nameBuf)
+		for i, b := range nameBuf {
+			if b == 0 {
+				endIdx = i
+				break
+			}
+		}
+		if endIdx == 0 {
+			continue
+		}
+		entityName := string(nameBuf[:endIdx])
 		for _, c := range entityName {
 			if unicode.IsLetter(c) || unicode.IsDigit(c) || unicode.IsPunct(c) || unicode.IsSpace(c) {
 				sanitizedName.WriteRune(c)
