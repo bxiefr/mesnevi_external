@@ -926,7 +926,7 @@ func drawInGameMenu(hdc win.HDC) {
 		{"[F1] Box ESP", getStatusText(boxRendering), boxRendering},
 		{"[F2] Skeleton ESP", getStatusText(skeletonRendering), skeletonRendering},
 		{"[F3] Head Circle", getStatusText(headCircle), headCircle},
-		{"[F4] Team Check", getStatusText(teamCheck), teamCheck},
+		{"[F4] Team Check", getStatusTest(teamCheck), teamCheck},
 		{"[F5] Health Bar", getStatusText(healthBarRendering), healthBarRendering},
 		{"[F6] Player Name", getStatusText(nameRendering), nameRendering},
 		{"[F7] Distance Display", getStatusText(distanceRendering), distanceRendering},
@@ -940,8 +940,13 @@ func drawInGameMenu(hdc win.HDC) {
 	startY := int32(75)
 	for _, item := range items {
 		setTextColor.Call(uintptr(hdc), uintptr(win.RGB(200, 200, 200)))
-		labelPtr, _ := windows.UTF16PtrFromString(item.label)
-		textOutProc.Call(uintptr(hdc), 45, uintptr(startY), uintptr(unsafe.Pointer(labelPtr)), uintptr(len(item.label)))
+		
+		labelUTF16, _ := windows.UTF16FromString(item.label)
+		textOutProc.Call(
+			uintptr(hdc), 45, uintptr(startY),
+			uintptr(unsafe.Pointer(&labelUTF16[0])),
+			uintptr(len(labelUTF16)-1),
+		)
 
 		if item.label == "[F11] Config Kaydet" {
 			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 200, 255)))
@@ -953,15 +958,24 @@ func drawInGameMenu(hdc win.HDC) {
 			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 200, 0)))
 		}
 
-		statusPtr, _ := windows.UTF16PtrFromString(item.status)
-		textOutProc.Call(uintptr(hdc), 230, uintptr(startY), uintptr(unsafe.Pointer(statusPtr)), uintptr(len(item.status)))
+		statusUTF16, _ := windows.UTF16FromString(item.status)
+		textOutProc.Call(
+			uintptr(hdc), 230, uintptr(startY),
+			uintptr(unsafe.Pointer(&statusUTF16[0])),
+			uintptr(len(statusUTF16)-1),
+		)
 
 		startY += 26
 	}
 
 	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(150, 150, 150)))
-	footerStr, _ := windows.UTF16PtrFromString("[INSERT] Menuyu Gizle/Goster")
-	textOutProc.Call(uintptr(hdc), 50, uintptr(startY+10), uintptr(unsafe.Pointer(footerStr)), uintptr(len("[INSERT] Menuyu Gizle/Goster")))
+	footerStr := "[INSERT] Menuyu Gizle/Goster"
+	footerUTF16, _ := windows.UTF16FromString(footerStr)
+	textOutProc.Call(
+		uintptr(hdc), 50, uintptr(startY+10),
+		uintptr(unsafe.Pointer(&footerUTF16[0])),
+		uintptr(len(footerUTF16)-1),
+	)
 }
 
 func getStatusText(status bool) string {
