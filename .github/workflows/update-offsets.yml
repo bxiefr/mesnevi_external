@@ -63,7 +63,7 @@ jobs:
               print("Fetching from sezzyaep...")
               raw_offsets = fetch_json("https://raw.githubusercontent.com/sezzyaep/CS2-OFFSETS/main/offsets.json")
               raw_client = fetch_json("https://raw.githubusercontent.com/sezzyaep/CS2-OFFSETS/main/client_dll.json")
-              
+
               if not raw_offsets:
                   return None
 
@@ -160,20 +160,20 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          
+
           # Tüm uzak branch bilgilerini güncelle
           git fetch origin
-          
+
           # Güncellenecek tüm branch'lerin listesi
           branches=("v1.8.7main" "v1.8.8neon")
 
           for branch in "${branches[@]}"; do
             echo "Processing branch: $branch"
             git checkout "$branch" || git checkout -b "$branch" origin/"$branch"
-            
+
             # Yeni offsets dosyasını kopyala (varsa eskisinin üzerine yazar)
             cp new_offsets.json offsets.json
-            
+
             # Git'e ekle ve değişiklik var mı yok mu takılmadan doğrudan commit at
             git add offsets.json
             git commit -m "chore: auto-update offsets.json for $branch" || echo "No changes to commit for $branch"
@@ -183,7 +183,42 @@ jobs:
           # Temizlik
           rm -f new_offsets.json
 
-          echo "Triggering central build-go.yml workflow..."
+      - name: Update status.json on cli branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          git fetch origin
+          git checkout cli || git checkout -b cli origin/cli
+          mkdir -p docs
+
+          python3 -c '
+          import json
+          from datetime import datetime, timezone, timedelta
+
+          tz = timezone(timedelta(hours=3))
+          now = datetime.now(tz).isoformat(timespec="seconds")
+
+          branches = ["v1.8.7main", "v1.8.8neon"]
+          data = {
+              "offset_sync": now,
+              "branches": [{"name": b, "updated_at": now} for b in branches]
+          }
+
+          with open("docs/status.json", "w", encoding="utf-8") as f:
+              json.dump(data, f, indent=2)
+          '
+
+          git add docs/status.json
+          git commit -m "chore: update status.json" || echo "No changes to commit for status.json"
+          git push origin cli || echo "Push skipped or failed for cli"
+
+      - name: Trigger central build-go.yml workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
           curl -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN" \
