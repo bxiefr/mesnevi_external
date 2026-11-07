@@ -294,6 +294,53 @@ body {
     font-size: clamp(1rem, 2vw, 1.15rem);
     color: var(--text-muted);
     line-height: 1.75;
+    margin-bottom: 32px;
+}
+
+.hero-actions {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.btn-lg {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 32px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-lg.primary {
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent-3), var(--accent-2));
+    box-shadow: 0 10px 30px var(--glow);
+}
+
+.btn-lg.secondary {
+    color: var(--text);
+    background: var(--card);
+    border: 1px solid var(--border-strong);
+    backdrop-filter: blur(12px);
+}
+
+.btn-lg:hover {
+    transform: translateY(-3px);
+}
+
+.btn-lg.primary:hover {
+    box-shadow: 0 16px 40px var(--glow);
+}
+
+.btn-lg small {
+    font-weight: 600;
+    font-size: 0.75rem;
+    opacity: 0.85;
 }
 
 .stats-grid {
@@ -604,6 +651,16 @@ footer {
     <section class="hero">
         <h1 data-i18n="heroTitle"></h1>
         <p data-i18n="heroDesc"></p>
+        <div class="hero-actions">
+            <a class="btn-lg primary" id="downloadMain" target="_blank" rel="noopener">
+                <span>⬇️</span>
+                <span><span data-i18n="dlMainTitle"></span><br><small data-i18n="dlMainNote"></small></span>
+            </a>
+            <a class="btn-lg secondary" id="downloadNeon" target="_blank" rel="noopener">
+                <span>✨</span>
+                <span><span data-i18n="dlNeonTitle"></span><br><small data-i18n="dlNeonNote"></small></span>
+            </a>
+        </div>
     </section>
 
     <div class="stats-grid">
@@ -645,9 +702,14 @@ footer {
 const OWNER = "bxiefr";
 const REPO = "mesnevi_external";
 const DEFAULT_BRANCH = "v1.8.3main";
+const NEON_BRANCH = "neon";
 const HIDDEN_BRANCHES = ["cli"];
 const TIME_ZONE = "Europe/Istanbul";
 const API = `https://api.github.com/repos/${OWNER}/${REPO}`;
+const STATUS_BRANCH = "cli";
+const STATUS_PATH = "docs/status.json";
+const STATUS_URL = `https://raw.githubusercontent.com/${OWNER}/${REPO}/${STATUS_BRANCH}/${STATUS_PATH}`;
+const zipUrl = branch => `https://github.com/${OWNER}/${REPO}/archive/refs/heads/${encodeURIComponent(branch)}.zip`;
 
 const DICT = {
     tr: {
@@ -669,6 +731,11 @@ const DICT = {
         fetchError: "Veriler çekilemedi.",
         navDownload: "İndir",
         navFaq: "SSS",
+        dlMainTitle: "Stabil Sürümü İndir",
+        dlMainNote: "main branch · sorunsuz",
+        dlNeonTitle: "Yeni Özellikleri Dene",
+        dlNeonNote: "neon branch · en güncel",
+        autoSuffix: " (Otomatik)",
         faqTitle: "SIKÇA SORULAN SORULAR",
         faqDesc: "Merak edilenler ve kısa cevapları",
         faq: [
@@ -721,6 +788,11 @@ const DICT = {
         fetchError: "Failed to fetch repository data.",
         navDownload: "Download",
         navFaq: "FAQ",
+        dlMainTitle: "Download Stable Build",
+        dlMainNote: "main branch · trouble-free",
+        dlNeonTitle: "Try Newest Features",
+        dlNeonNote: "neon branch · latest",
+        autoSuffix: " (Auto)",
         faqTitle: "FREQUENTLY ASKED QUESTIONS",
         faqDesc: "Common questions with short answers",
         faq: [
@@ -756,9 +828,15 @@ const DICT = {
     }
 };
 
+function computeAutoTheme() {
+    const hour = new Date().getHours();
+    return (hour >= 6 && hour < 18) ? "golden" : "dusk";
+}
+
 const state = {
     lang: readStorage("lang") === "en" ? "en" : "tr",
-    theme: readStorage("theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "golden" : "dusk"),
+    themeMode: readStorage("theme") ? "manual" : "auto",
+    theme: readStorage("theme") || computeAutoTheme(),
     branches: null,
     branchError: false,
     offsetDate: undefined
@@ -808,10 +886,12 @@ function renderStatic() {
 }
 
 function renderTheme() {
+    if (state.themeMode === "auto") state.theme = computeAutoTheme();
     document.documentElement.dataset.theme = state.theme;
     const dusk = state.theme === "dusk";
     document.getElementById("themeIcon").textContent = dusk ? "🌇" : "🌅";
-    document.getElementById("themeLabel").textContent = dusk ? t("themeDusk") : t("themeGolden");
+    const label = dusk ? t("themeDusk") : t("themeGolden");
+    document.getElementById("themeLabel").textContent = state.themeMode === "auto" ? label + t("autoSuffix") : label;
 }
 
 function renderOffset() {
@@ -867,9 +947,15 @@ function renderFaq() {
     });
 }
 
+function renderDownloadLinks() {
+    document.getElementById("downloadMain").href = zipUrl(DEFAULT_BRANCH);
+    document.getElementById("downloadNeon").href = zipUrl(NEON_BRANCH);
+}
+
 function renderAll() {
     renderStatic();
     renderTheme();
+    renderDownloadLinks();
     renderFaq();
     renderOffset();
     renderBranches();
@@ -881,7 +967,21 @@ async function fetchJson(url) {
     return response.json();
 }
 
-async function loadBranches() {
+async function loadFromStatusFile() {
+    const response = await fetch(STATUS_URL, { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    if (!Array.isArray(data.branches)) throw new Error("invalid status.json");
+
+    state.branches = data.branches
+        .filter(branch => !HIDDEN_BRANCHES.includes(branch.name))
+        .map(branch => ({ name: branch.name, date: branch.updated_at || null }));
+    state.branches.sort((a, b) => (b.name === DEFAULT_BRANCH) - (a.name === DEFAULT_BRANCH));
+    state.branchError = false;
+    state.offsetDate = Object.prototype.hasOwnProperty.call(data, "offset_sync") ? data.offset_sync : null;
+}
+
+async function loadBranchesFromApi() {
     try {
         const list = await fetchJson(`${API}/branches`);
         const visible = list.filter(branch => !HIDDEN_BRANCHES.includes(branch.name));
@@ -898,16 +998,24 @@ async function loadBranches() {
     } catch {
         state.branchError = true;
     }
-    renderBranches();
 }
 
-async function loadOffsetDate() {
+async function loadOffsetFromApi() {
     try {
         const commits = await fetchJson(`${API}/commits?path=offsets.json&sha=${encodeURIComponent(DEFAULT_BRANCH)}&per_page=1`);
         state.offsetDate = commits.length ? commits[0].commit.committer.date : null;
     } catch {
         state.offsetDate = null;
     }
+}
+
+async function loadRepoData() {
+    try {
+        await loadFromStatusFile();
+    } catch {
+        await Promise.all([loadBranchesFromApi(), loadOffsetFromApi()]);
+    }
+    renderBranches();
     renderOffset();
 }
 
@@ -918,10 +1026,15 @@ document.getElementById("langBtn").addEventListener("click", () => {
 });
 
 document.getElementById("themeBtn").addEventListener("click", () => {
+    state.themeMode = "manual";
     state.theme = state.theme === "dusk" ? "golden" : "dusk";
     writeStorage("theme", state.theme);
     renderTheme();
 });
+
+setInterval(() => {
+    if (state.themeMode === "auto") renderTheme();
+}, 10 * 60 * 1000);
 
 function setupReveal() {
     const observer = new IntersectionObserver(entries => {
@@ -956,8 +1069,7 @@ function setupMenuSpy() {
 renderAll();
 setupReveal();
 setupMenuSpy();
-loadBranches();
-loadOffsetDate();
+loadRepoData();
 </script>
 </body>
 </html>
