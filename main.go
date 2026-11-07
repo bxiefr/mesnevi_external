@@ -217,7 +217,7 @@ var release GitHubRelease
 
 	// Sayısal parse işlemine gerek yok, doğrudan string olarak karşılaştırıyoruz!
 	remoteVersion := release.TagName
-	localVersion := appVersion
+	localVersion := localVersion
 
 	fmt.Printf("[DEBUG] GitHub'dan gelen TagName (Remote): '%s'\n", remoteVersion)
 	fmt.Printf("[DEBUG] Programin icindeki Local Version: '%s'\n", localVersion)
