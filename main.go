@@ -671,7 +671,7 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		if endIdx == 0 {
 			continue
 		}
-		entityName := string(nameBuf[:endIdx])
+		
 		for _, c := range entityName {
 			if unicode.IsLetter(c) || unicode.IsDigit(c) || unicode.IsPunct(c) || unicode.IsSpace(c) {
 				sanitizedName.WriteRune(c)
