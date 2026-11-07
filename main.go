@@ -12,6 +12,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"runtime"
 	"runtime/debug"
 	"strings"
@@ -32,10 +34,18 @@ var embeddedHitSound []byte
 
 // GitHub Güncelleme Ayarları
 const githubRepo = "bxiefr/mesnevi_external"
-var currentVersion = "dev"
+
+// Bunlar build sırasında -ldflags ile enjekte edilir
+var (
+	currentVersion = "dev"
+	buildStamp     = "0"
+)
+
+var stampRe = regexp.MustCompile(`BuildStamp:\s*(\d+)`)
 
 type GitHubRelease struct {
 	TagName string `json:"tag_name"`
+	Body    string `json:"body"`
 	Assets  []struct {
 		Name               string `json:"name"`
 		BrowserDownloadURL string `json:"browser_download_url"`
@@ -194,7 +204,12 @@ func init() {
 }
 
 func checkForUpdates() {
-	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", githubRepo)
+	if currentVersion == "dev" {
+		return
+	}
+
+	// Kendi sürümünün release'ine bak (1.8.7 / 1.8.8 karışmasın)
+	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", githubRepo, currentVersion)
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(apiURL)
@@ -212,36 +227,42 @@ func checkForUpdates() {
 		return
 	}
 
-	if release.TagName == "" {
+	m := stampRe.FindStringSubmatch(release.Body)
+	if m == nil {
+		return // release notunda damga yok, güncelleme sayma
+	}
+
+	remoteStamp, err1 := strconv.ParseInt(m[1], 10, 64)
+	localStamp, err2 := strconv.ParseInt(buildStamp, 10, 64)
+	if err1 != nil || err2 != nil {
 		return
 	}
 
-	remoteVersion := release.TagName
+	fmt.Printf("[DEBUG] Remote BuildStamp: %d (%s)\n", remoteStamp, time.Unix(remoteStamp, 0).Format("2006-01-02 15:04:05"))
+	fmt.Printf("[DEBUG] Local  BuildStamp: %d (%s)\n", localStamp, time.Unix(localStamp, 0).Format("2006-01-02 15:04:05"))
 
-	fmt.Printf("[DEBUG] GitHub'dan gelen TagName (Remote): '%s'\n", remoteVersion)
-	fmt.Printf("[DEBUG] Programin icindeki Local Version: '%s'\n", currentVersion)
+	if remoteStamp <= localStamp {
+		fmt.Println("[*] Guncel. Baslatiliyor...")
+		return
+	}
 
-	// GitHub'dan gelen sürüm ile lokaldeki (ldflags ile enjekte edilen) sürümü karşılaştır
-	if remoteVersion != currentVersion {
-		fmt.Printf("\n[!] Yeni surum bulundu (%s -> %s). Guncellemek ister misin? [Y/N]: ", currentVersion, remoteVersion)
+	fmt.Printf("\n[!] Yeni build bulundu (%s). Guncellemek ister misin? [Y/N]: ", time.Unix(remoteStamp, 0).Format("2006-01-02 15:04"))
 
-		var choice string
-		_, _ = fmt.Scanln(&choice)
+	var choice string
+	_, _ = fmt.Scanln(&choice)
+	choice = strings.TrimSpace(strings.ToUpper(choice))
 
-		choice = strings.TrimSpace(strings.ToUpper(choice))
-		if choice == "Y" || choice == "EVET" {
-			for _, asset := range release.Assets {
-				if asset.Name == "mesnevi.exe" {
-					fmt.Println("[*] Guncelleme indiriliyor...")
-					downloadAndUpdate(asset.BrowserDownloadURL)
-					break
-				}
-			}
-		} else {
-			fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
+	if choice != "Y" && choice != "EVET" {
+		fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
+		return
+	}
+
+	for _, asset := range release.Assets {
+		if asset.Name == "mesnevi.exe" {
+			fmt.Println("[*] Guncelleme indiriliyor...")
+			downloadAndUpdate(asset.BrowserDownloadURL)
+			break
 		}
-	} else {
-		fmt.Println("[*] Hile guncel. Baslatiliyor...")
 	}
 }
 
@@ -252,11 +273,19 @@ func downloadAndUpdate(downloadURL string) {
 	}
 
 	tmpPath := exePath + ".tmp"
-	resp, err := http.Get(downloadURL)
+
+	client := &http.Client{Timeout: 2 * time.Minute}
+	resp, err := client.Get(downloadURL)
 	if err != nil {
+		fmt.Println("[-] Indirme hatasi:", err)
 		return
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		fmt.Println("[-] Indirme basarisiz, HTTP:", resp.StatusCode)
+		return
+	}
 
 	out, err := os.Create(tmpPath)
 	if err != nil {
@@ -264,11 +293,10 @@ func downloadAndUpdate(downloadURL string) {
 	}
 
 	_, err = io.Copy(out, resp.Body)
-	
-	// KRİTİK NOKTA: Dosya kilitli kalmasın diye defer yerine MANUEL kapatıyoruz!
-	out.Close() 
-	
+	out.Close() // defer değil, manuel kapat (dosya kilitli kalmasın)
+
 	if err != nil {
+		os.Remove(tmpPath)
 		return
 	}
 
