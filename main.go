@@ -926,7 +926,7 @@ func drawInGameMenu(hdc win.HDC) {
 		{"[F1] Box ESP", getStatusText(boxRendering), boxRendering},
 		{"[F2] Skeleton ESP", getStatusText(skeletonRendering), skeletonRendering},
 		{"[F3] Head Circle", getStatusText(headCircle), headCircle},
-		{"[F4] Team Check", getStatusTest(teamCheck), teamCheck},
+		{"[F4] Team Check", getStatusText(teamCheck), teamCheck},
 		{"[F5] Health Bar", getStatusText(healthBarRendering), healthBarRendering},
 		{"[F6] Player Name", getStatusText(nameRendering), nameRendering},
 		{"[F7] Distance Display", getStatusText(distanceRendering), distanceRendering},
