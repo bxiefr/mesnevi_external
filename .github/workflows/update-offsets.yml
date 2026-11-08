@@ -204,7 +204,7 @@ jobs:
           tz = timezone(timedelta(hours=3))
           now = datetime.now(tz).isoformat(timespec="seconds")
 
-          branches = ["v1.8.7main", "v1.8.8neon"]
+          branches = ["v1.8.8main", "v1.8.9neon"]
           data = {
               "offset_sync": now,
               "branches": [{"name": b, "updated_at": now} for b in branches]
