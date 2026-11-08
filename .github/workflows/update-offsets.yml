@@ -97,7 +97,7 @@ jobs:
                   "m_ArmorValue": get_field_offset("CCSPlayerController", "m_ArmorValue") or get_field_offset("C_CSPlayerPawn", "m_ArmorValue") or parse_val(client_offsets.get("m_ArmorValue")),
                   "m_pBulletServices": get_field_offset("C_CSPlayerPawn", "m_pBulletServices") or parse_val(client_offsets.get("m_pBulletServices")),
                   "m_totalHitsOnServer": get_field_offset("CCSPlayerController", "m_totalHitsOnServer") or get_field_offset("CCSPlayer_BulletServices", "m_totalHitsOnServer") or parse_val(client_offsets.get("m_totalHitsOnServer")),
-                  "m_flC4Blow": get_field_offset("CPlantedC4", "m_flC4Blow") or get_field_offset("CCSPlayerPawn", "m_flC4Blow") or 0
+                  "m_flC4Blow": get_field_offset("C_PlantedC4", "m_flC4Blow") or get_field_offset("CPlantedC4", "m_flC4Blow") or 0
               }
 
           def get_a2x():
@@ -133,7 +133,7 @@ jobs:
                   "m_ArmorValue": get_field_offset("CCSPlayerController", "m_ArmorValue") or get_field_offset("C_CSPlayerPawn", "m_ArmorValue"),
                   "m_pBulletServices": get_field_offset("C_CSPlayerPawn", "m_pBulletServices"),
                   "m_totalHitsOnServer": get_field_offset("CCSPlayerController", "m_totalHitsOnServer") or get_field_offset("CCSPlayer_BulletServices", "m_totalHitsOnServer"),
-                  "m_flC4Blow": get_field_offset("CPlantedC4", "m_flC4Blow") or get_field_offset("CCSPlayerPawn", "m_flC4Blow") or 0
+                  "m_flC4Blow": get_field_offset("C_PlantedC4", "m_flC4Blow") or get_field_offset("CPlantedC4", "m_flC4Blow") or 0
               }
 
           my_offsets = None
