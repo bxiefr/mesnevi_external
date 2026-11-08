@@ -32,6 +32,7 @@ var embeddedOffsets []byte
 //go:embed hit.wav
 var embeddedHitSound []byte
 
+// GitHub Güncelleme Ayarları
 const githubRepo = "bxiefr/mesnevi_external"
 
 var (
@@ -202,12 +203,14 @@ func init() {
 	loadConfig()
 }
 
+// ---- Geri Yüklenen Güncelleme Fonksiyonları ----
 func checkForUpdates() {
 	if currentVersion == "dev" {
 		return
 	}
 
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", githubRepo, currentVersion)
+
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(apiURL)
 	if err != nil {
@@ -235,21 +238,28 @@ func checkForUpdates() {
 		return
 	}
 
+	fmt.Printf("[DEBUG] Remote BuildStamp: %d (%s)\n", remoteStamp, time.Unix(remoteStamp, 0).Format("2006-01-02 15:04:05"))
+	fmt.Printf("[DEBUG] Local  BuildStamp: %d (%s)\n", localStamp, time.Unix(localStamp, 0).Format("2006-01-02 15:04:05"))
+
 	if remoteStamp <= localStamp {
+		fmt.Println("[*] Guncel. Baslatiliyor...")
 		return
 	}
 
 	fmt.Printf("\n[!] Yeni build bulundu (%s). Guncellemek ister misin? [Y/N]: ", time.Unix(remoteStamp, 0).Format("2006-01-02 15:04"))
+
 	var choice string
 	_, _ = fmt.Scanln(&choice)
 	choice = strings.TrimSpace(strings.ToUpper(choice))
 
 	if choice != "Y" && choice != "EVET" {
+		fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
 		return
 	}
 
 	for _, asset := range release.Assets {
 		if asset.Name == "mesnevi.exe" {
+			fmt.Println("[*] Guncelleme indiriliyor...")
 			downloadAndUpdate(asset.BrowserDownloadURL)
 			break
 		}
@@ -261,15 +271,19 @@ func downloadAndUpdate(downloadURL string) {
 	if err != nil {
 		return
 	}
+
 	tmpPath := exePath + ".tmp"
+
 	client := &http.Client{Timeout: 2 * time.Minute}
 	resp, err := client.Get(downloadURL)
 	if err != nil {
+		fmt.Println("[-] Indirme hatasi:", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
+		fmt.Println("[-] Indirme basarisiz, HTTP:", resp.StatusCode)
 		return
 	}
 
@@ -277,6 +291,7 @@ func downloadAndUpdate(downloadURL string) {
 	if err != nil {
 		return
 	}
+
 	_, err = io.Copy(out, resp.Body)
 	out.Close()
 
@@ -302,8 +317,10 @@ del "%%~f0"
 	if err := cmd.Start(); err != nil {
 		return
 	}
+
 	os.Exit(0)
 }
+// ----------------------------------------------
 
 func getConfigPath() string {
 	exeDir, err := os.Executable()
@@ -718,7 +735,6 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 	return entities
 }
 
-// Bomb Timer ve Yön Okunu Çizen Fonksiyon
 func drawBombTimer(hdc win.HDC, procHandle windows.Handle, clientDll uintptr, screenWidth, screenHeight uintptr, offsets Offset) {
 	if !bombTimerRendering {
 		return
@@ -736,24 +752,20 @@ func drawBombTimer(hdc win.HDC, procHandle windows.Handle, clientDll uintptr, sc
 		return
 	}
 
-	// GlobalVars üzerinden mevcut oyun zamanını alıyoruz
 	var globalVars uintptr
 	err = read(procHandle, clientDll+offsets.DwGlobalVars, &globalVars)
 	var currentTime float32 = 0
 	if err == nil && globalVars != 0 {
-		// curtime offset (Genellikle CGlobalVars içinde ilk 16-32 bayt içindedir, güvenli okuma)
 		read(procHandle, globalVars+0x14, &currentTime)
 	} else {
 		currentTime = float32(time.Now().Unix())
 	}
 
-	// Kalan süre hesabı (Standart C4 süresi 40 saniyedir)
 	timeLeft := c4Blow - currentTime
 	if timeLeft < 0 {
 		timeLeft = 0
 	}
 
-	// 0 - 40 saniye aralığını 0.0 - 1.0 aralığına normalize et
 	ratio := float64(timeLeft) / 40.0
 	if ratio > 1.0 {
 		ratio = 1.0
@@ -761,15 +773,11 @@ func drawBombTimer(hdc win.HDC, procHandle windows.Handle, clientDll uintptr, sc
 		ratio = 0.0
 	}
 
-	// Gradyan Renk Hesaplama (Yeşil -> Sarı -> Kırmızı)
-	// Yeşil (0, 255, 0) -> Sarı (255, 255, 0) -> Kırmızı (255, 0, 0)
 	var rCol, gCol byte
 	if ratio > 0.5 {
-		// Yeşil -> Sarı geçişi
 		rCol = byte(255 * (1.0 - ratio) * 2)
 		gCol = 255
 	} else {
-		// Sarı -> Kırmızı geçişi
 		rCol = 255
 		gCol = byte(255 * (ratio * 2))
 	}
@@ -779,7 +787,6 @@ func drawBombTimer(hdc win.HDC, procHandle windows.Handle, clientDll uintptr, sc
 		defer deleteObject.Call(gradientPen)
 	}
 
-	// Bombanın dünya üzerindeki koordinatını bul
 	var gameScene uintptr
 	var bombOrigin Vector3
 	err = read(procHandle, plantedC4+offsets.M_pGameSceneNode, &gameScene)
@@ -793,19 +800,16 @@ func drawBombTimer(hdc win.HDC, procHandle windows.Handle, clientDll uintptr, sc
 
 	setBkMode.Call(uintptr(hdc), 1)
 	
-	// Ekranın Üst Kısmında Büyük Bilgi Kutusu
 	timerStr := fmt.Sprintf("BOMB: %.1fS", timeLeft)
 	textPtr, _ := windows.UTF16PtrFromString(timerStr)
 	win.SetTextColor(hdc, win.RGB(rCol, gCol, 0))
-	setTextAlign.Call(uintptr(hdc), 0x00000006) // Center aligned
+	setTextAlign.Call(uintptr(hdc), 0x00000006)
 	textOutProc.Call(uintptr(hdc), uintptr(screenWidth/2), 20, uintptr(unsafe.Pointer(textPtr)), uintptr(len(timerStr)))
 
-	// Eğer bomba ekranda görünüyorsa etrafına da sayaç ve ok çiz
 	if bx > 0 && by > 0 && bx < float32(screenWidth) && by < float32(screenHeight) {
 		win.SelectObject(hdc, win.HGDIOBJ(gradientPen))
 		win.Ellipse(hdc, int32(bx)-15, int32(by)-15, int32(bx)+15, int32(by)+15)
 
-		// Bombaya doğru yön oku çizimi (Merkezden bombaya çizgi/ok)
 		centerX := float32(screenWidth / 2)
 		centerY := float32(screenHeight / 2)
 		win.MoveToEx(hdc, int(centerX), int(centerY), nil)
@@ -966,7 +970,7 @@ func drawInGameMenu(hdc win.HDC) {
 	selectObject.Call(uintptr(hdc), menuBrush)
 	selectObject.Call(uintptr(hdc), menuBorderPen)
 
-	rectangleProc.Call(uintptr(hdc), 30, 30, 350, 445) // Menü boyutu uzatıldı
+	rectangleProc.Call(uintptr(hdc), 30, 30, 350, 445)
 
 	deleteObject.Call(menuBrush)
 	deleteObject.Call(menuBorderPen)
@@ -1197,6 +1201,7 @@ func listenHotkeys() {
 }
 
 func main() {
+	// Güncelleme kontrolü aktif
 	checkForUpdates()
 
 	setPriorityClass.Call(uintptr(windows.CurrentProcess()), 0x00008000)
@@ -1267,7 +1272,7 @@ func main() {
 	defer deleteObject.Call(armorPen)
 
 	hitmarkerPen, _, _ = createPen.Call(win.PS_SOLID, 2, 0xffffff)
-	if hitmarkerPens := hitmarkerPen; hitmarkerPens == 0 { return }
+	if hitmarkerPen == 0 { return }
 	defer deleteObject.Call(hitmarkerPen)
 
 	if skeletonColorIndex >= len(themePens) {
@@ -1314,9 +1319,7 @@ func main() {
 			drawHitmarker(win.HDC(memhdc), hitmarkerPen, screenWidth, screenHeight)
 		}
 
-		// Yeni Eklenen Bomb Timer ve Ok Fonksiyonu Çağrısı
 		drawBombTimer(win.HDC(memhdc), procHandle, clientDll, screenWidth, screenHeight, offsets)
-
 		drawInGameMenu(win.HDC(memhdc))
 
 		win.BitBlt(hdc, 0, 0, int32(screenWidth), int32(screenHeight), win.HDC(memhdc), 0, 0, win.SRCCOPY)
