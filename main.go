@@ -32,7 +32,6 @@ var embeddedOffsets []byte
 //go:embed hit.wav
 var embeddedHitSound []byte
 
-// GitHub Güncelleme Ayarları
 const githubRepo = "bxiefr/mesnevi_external"
 
 var (
@@ -40,7 +39,6 @@ var (
 	buildStamp     = "0"
 )
 
-// Geri eklenen BuildStamp regex tanımı
 var stampRe = regexp.MustCompile(`BuildStamp:\s*(\d+)`)
 
 type GitHubRelease struct {
@@ -89,22 +87,25 @@ type Entity struct {
 }
 
 type Offset struct {
-	DwViewMatrix             uintptr `json:"dwViewMatrix"`
-	DwLocalPlayerPawn        uintptr `json:"dwLocalPlayerPawn"`
-	DwEntityList             uintptr `json:"dwEntityList"`
-	M_hPlayerPawn            uintptr `json:"m_hPlayerPawn"`
-	M_iHealth                uintptr `json:"m_iHealth"`
-	M_lifeState              uintptr `json:"m_lifeState"`
-	M_iTeamNum               uintptr `json:"m_iTeamNum"`
-	M_vOldOrigin             uintptr `json:"m_vOldOrigin"`
-	M_pGameSceneNode         uintptr `json:"m_pGameSceneNode"`
-	M_modelState             uintptr `json:"m_modelState"`
-	M_boneArray              uintptr `json:"m_boneArray"`
-	M_nodeToWorld            uintptr `json:"m_nodeToWorld"`
-	M_sSanitizedPlayerName   uintptr `json:"m_sSanitizedPlayerName"`
-	M_ArmorValue             uintptr `json:"m_ArmorValue"`
-	M_pBulletServices        uintptr `json:"m_pBulletServices"`
-	M_totalHitsOnServer      uintptr `json:"m_totalHitsOnServer"`
+	DwViewMatrix           uintptr `json:"dwViewMatrix"`
+	DwLocalPlayerPawn      uintptr `json:"dwLocalPlayerPawn"`
+	DwEntityList           uintptr `json:"dwEntityList"`
+	DwPlantedC4            uintptr `json:"dwPlantedC4"`
+	DwGlobalVars           uintptr `json:"dwGlobalVars"`
+	M_hPlayerPawn          uintptr `json:"m_hPlayerPawn"`
+	M_iHealth              uintptr `json:"m_iHealth"`
+	M_lifeState            uintptr `json:"m_lifeState"`
+	M_iTeamNum             uintptr `json:"m_iTeamNum"`
+	M_vOldOrigin           uintptr `json:"m_vOldOrigin"`
+	M_pGameSceneNode       uintptr `json:"m_pGameSceneNode"`
+	M_modelState           uintptr `json:"m_modelState"`
+	M_boneArray            uintptr `json:"m_boneArray"`
+	M_nodeToWorld          uintptr `json:"m_nodeToWorld"`
+	M_sSanitizedPlayerName uintptr `json:"m_sSanitizedPlayerName"`
+	M_ArmorValue           uintptr `json:"m_ArmorValue"`
+	M_pBulletServices      uintptr `json:"m_pBulletServices"`
+	M_totalHitsOnServer    uintptr `json:"m_totalHitsOnServer"`
+	M_flC4Blow             uintptr `json:"m_flC4Blow"`
 }
 
 type Config struct {
@@ -119,37 +120,38 @@ type Config struct {
 	DistanceRendering   bool `json:"distanceRendering"`
 	HitmarkerRendering  bool `json:"hitmarkerRendering"`
 	HitSoundRendering   bool `json:"hitSoundRendering"`
+	BombTimerRendering  bool `json:"bombTimerRendering"`
 	SkeletonColorIndex  int  `json:"skeletonColorIndex"`
 }
 
 var (
-	cachedScreenWidth    float32
-	cachedScreenHeight   float32
-	user32               = windows.NewLazySystemDLL("user32.dll")
-	getForegroundWindow  = user32.NewProc("GetForegroundWindow")
-	gdi32                = windows.NewLazySystemDLL("gdi32.dll")
-	kernel32             = windows.NewLazySystemDLL("kernel32.dll")
-	setPriorityClass     = kernel32.NewProc("SetPriorityClass")
-	winmm                = windows.NewLazySystemDLL("winmm.dll")
-	getSystemMetrics     = user32.NewProc("GetSystemMetrics")
+	cachedScreenWidth          float32
+	cachedScreenHeight         float32
+	user32                     = windows.NewLazySystemDLL("user32.dll")
+	getForegroundWindow        = user32.NewProc("GetForegroundWindow")
+	gdi32                      = windows.NewLazySystemDLL("gdi32.dll")
+	kernel32                   = windows.NewLazySystemDLL("kernel32.dll")
+	setPriorityClass           = kernel32.NewProc("SetPriorityClass")
+	winmm                      = windows.NewLazySystemDLL("winmm.dll")
+	getSystemMetrics           = user32.NewProc("GetSystemMetrics")
 	setLayeredWindowAttributes = user32.NewProc("SetLayeredWindowAttributes")
 	setWindowDisplayAffinity   = user32.NewProc("SetWindowDisplayAffinity")
-	showCursor           = user32.NewProc("ShowCursor")
-	setTextAlign         = gdi32.NewProc("SetTextAlign")
-	createFont           = gdi32.NewProc("CreateFontW")
-	createCompatibleDC   = gdi32.NewProc("CreateCompatibleDC")
-	createSolidBrush     = gdi32.NewProc("CreateSolidBrush")
-	createPen            = gdi32.NewProc("CreatePen")
-	selectObject         = gdi32.NewProc("SelectObject")
-	deleteObject         = gdi32.NewProc("DeleteObject")
-	rectangleProc        = gdi32.NewProc("Rectangle")
-	textOutProc          = gdi32.NewProc("TextOutW")
-	setBkMode            = gdi32.NewProc("SetBkMode")
-	setTextColor         = gdi32.NewProc("SetTextColor")
-	gdiFlush             = gdi32.NewProc("GdiFlush")
-	GetAsyncKeyState     = user32.NewProc("GetAsyncKeyState")
-	beepProc             = kernel32.NewProc("Beep")
-	playSoundProc        = winmm.NewProc("PlaySoundW")
+	showCursor                 = user32.NewProc("ShowCursor")
+	setTextAlign               = gdi32.NewProc("SetTextAlign")
+	createFont                 = gdi32.NewProc("CreateFontW")
+	createCompatibleDC         = gdi32.NewProc("CreateCompatibleDC")
+	createSolidBrush           = gdi32.NewProc("CreateSolidBrush")
+	createPen                  = gdi32.NewProc("CreatePen")
+	selectObject               = gdi32.NewProc("SelectObject")
+	deleteObject               = gdi32.NewProc("DeleteObject")
+	rectangleProc              = gdi32.NewProc("Rectangle")
+	textOutProc                = gdi32.NewProc("TextOutW")
+	setBkMode                  = gdi32.NewProc("SetBkMode")
+	setTextColor               = gdi32.NewProc("SetTextColor")
+	gdiFlush                   = gdi32.NewProc("GdiFlush")
+	GetAsyncKeyState           = user32.NewProc("GetAsyncKeyState")
+	beepProc                   = kernel32.NewProc("Beep")
+	playSoundProc              = winmm.NewProc("PlaySoundW")
 )
 
 const (
@@ -170,6 +172,7 @@ var (
 	distanceRendering   bool    = true
 	hitmarkerRendering  bool    = true
 	hitSoundRendering   bool    = true
+	bombTimerRendering  bool    = true
 	menuOpen            bool    = true
 	frameDelay          uint32  = 15
 	currentHue          float64 = 0
@@ -205,7 +208,6 @@ func checkForUpdates() {
 	}
 
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", githubRepo, currentVersion)
-
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(apiURL)
 	if err != nil {
@@ -233,28 +235,21 @@ func checkForUpdates() {
 		return
 	}
 
-	fmt.Printf("[DEBUG] Remote BuildStamp: %d (%s)\n", remoteStamp, time.Unix(remoteStamp, 0).Format("2006-01-02 15:04:05"))
-	fmt.Printf("[DEBUG] Local  BuildStamp: %d (%s)\n", localStamp, time.Unix(localStamp, 0).Format("2006-01-02 15:04:05"))
-
 	if remoteStamp <= localStamp {
-		fmt.Println("[*] Guncel. Baslatiliyor...")
 		return
 	}
 
 	fmt.Printf("\n[!] Yeni build bulundu (%s). Guncellemek ister misin? [Y/N]: ", time.Unix(remoteStamp, 0).Format("2006-01-02 15:04"))
-
 	var choice string
 	_, _ = fmt.Scanln(&choice)
 	choice = strings.TrimSpace(strings.ToUpper(choice))
 
 	if choice != "Y" && choice != "EVET" {
-		fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
 		return
 	}
 
 	for _, asset := range release.Assets {
 		if asset.Name == "mesnevi.exe" {
-			fmt.Println("[*] Guncelleme indiriliyor...")
 			downloadAndUpdate(asset.BrowserDownloadURL)
 			break
 		}
@@ -266,19 +261,15 @@ func downloadAndUpdate(downloadURL string) {
 	if err != nil {
 		return
 	}
-
 	tmpPath := exePath + ".tmp"
-
 	client := &http.Client{Timeout: 2 * time.Minute}
 	resp, err := client.Get(downloadURL)
 	if err != nil {
-		fmt.Println("[-] Indirme hatasi:", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		fmt.Println("[-] Indirme basarisiz, HTTP:", resp.StatusCode)
 		return
 	}
 
@@ -286,7 +277,6 @@ func downloadAndUpdate(downloadURL string) {
 	if err != nil {
 		return
 	}
-
 	_, err = io.Copy(out, resp.Body)
 	out.Close()
 
@@ -312,7 +302,6 @@ del "%%~f0"
 	if err := cmd.Start(); err != nil {
 		return
 	}
-
 	os.Exit(0)
 }
 
@@ -337,6 +326,7 @@ func saveConfig() {
 		DistanceRendering:   distanceRendering,
 		HitmarkerRendering:  hitmarkerRendering,
 		HitSoundRendering:   hitSoundRendering,
+		BombTimerRendering:  bombTimerRendering,
 		SkeletonColorIndex:  skeletonColorIndex,
 	}
 
@@ -366,6 +356,7 @@ func loadConfig() {
 		distanceRendering = cfg.DistanceRendering
 		hitmarkerRendering = cfg.HitmarkerRendering
 		hitSoundRendering = cfg.HitSoundRendering
+		bombTimerRendering = cfg.BombTimerRendering
 		skeletonColorIndex = cfg.SkeletonColorIndex
 	}
 }
@@ -467,25 +458,25 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		return entities
 	}
 	var (
-		localPlayerP         uintptr
-		localPlayerGameScene uintptr
+		localPlayerP           uintptr
+		localPlayerGameScene   uintptr
 		localPlayerSceneOrigin Vector3
-		localTeam            int32
-		listEntry            uintptr
-		gameScene            uintptr
-		entityController     uintptr
-		entityControllerPawn uintptr
-		entityPawn           uintptr
-		entityNameAddress    uintptr
-		entityBoneArray      uintptr
-		entityTeam           int32
-		entityHealth         int32
-		entityArmor          int32
-		entityLifeState      int32
-		entityName           string
-		sanitizedNameStr     string
-		entityOrigin         Vector3
-		viewMatrix           Matrix
+		localTeam              int32
+		listEntry              uintptr
+		gameScene              uintptr
+		entityController       uintptr
+		entityControllerPawn   uintptr
+		entityPawn             uintptr
+		entityNameAddress      uintptr
+		entityBoneArray        uintptr
+		entityTeam             int32
+		entityHealth           int32
+		entityArmor            int32
+		entityLifeState        int32
+		entityName             string
+		sanitizedNameStr       string
+		entityOrigin           Vector3
+		viewMatrix             Matrix
 	)
 	bones := map[string]int{
 		"head":        6,
@@ -507,10 +498,10 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		"ankle_R":     27,
 	}
 	var (
-		currentBone        Vector3
-		entityHead         Vector3
-		entityHeadTop      Vector3
-		entityHeadBottom   Vector3
+		currentBone      Vector3
+		entityHead       Vector3
+		entityHeadTop    Vector3
+		entityHeadBottom Vector3
 	)
 
 	err = read(procHandle, clientDll+offsets.DwLocalPlayerPawn, &localPlayerP)
@@ -727,6 +718,101 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 	return entities
 }
 
+// Bomb Timer ve Yön Okunu Çizen Fonksiyon
+func drawBombTimer(hdc win.HDC, procHandle windows.Handle, clientDll uintptr, screenWidth, screenHeight uintptr, offsets Offset) {
+	if !bombTimerRendering {
+		return
+	}
+
+	var plantedC4 uintptr
+	err := read(procHandle, clientDll+offsets.DwPlantedC4, &plantedC4)
+	if err != nil || plantedC4 == 0 {
+		return
+	}
+
+	var c4Blow float32
+	err = read(procHandle, plantedC4+offsets.M_flC4Blow, &c4Blow)
+	if err != nil || c4Blow <= 0 {
+		return
+	}
+
+	// GlobalVars üzerinden mevcut oyun zamanını alıyoruz
+	var globalVars uintptr
+	err = read(procHandle, clientDll+offsets.DwGlobalVars, &globalVars)
+	var currentTime float32 = 0
+	if err == nil && globalVars != 0 {
+		// curtime offset (Genellikle CGlobalVars içinde ilk 16-32 bayt içindedir, güvenli okuma)
+		read(procHandle, globalVars+0x14, &currentTime)
+	} else {
+		currentTime = float32(time.Now().Unix())
+	}
+
+	// Kalan süre hesabı (Standart C4 süresi 40 saniyedir)
+	timeLeft := c4Blow - currentTime
+	if timeLeft < 0 {
+		timeLeft = 0
+	}
+
+	// 0 - 40 saniye aralığını 0.0 - 1.0 aralığına normalize et
+	ratio := float64(timeLeft) / 40.0
+	if ratio > 1.0 {
+		ratio = 1.0
+	} else if ratio < 0.0 {
+		ratio = 0.0
+	}
+
+	// Gradyan Renk Hesaplama (Yeşil -> Sarı -> Kırmızı)
+	// Yeşil (0, 255, 0) -> Sarı (255, 255, 0) -> Kırmızı (255, 0, 0)
+	var rCol, gCol byte
+	if ratio > 0.5 {
+		// Yeşil -> Sarı geçişi
+		rCol = byte(255 * (1.0 - ratio) * 2)
+		gCol = 255
+	} else {
+		// Sarı -> Kırmızı geçişi
+		rCol = 255
+		gCol = byte(255 * (ratio * 2))
+	}
+
+	gradientPen, _, _ := createPen.Call(win.PS_SOLID, 2, uintptr(rCol)|(uintptr(gCol)<<8))
+	if gradientPen != 0 {
+		defer deleteObject.Call(gradientPen)
+	}
+
+	// Bombanın dünya üzerindeki koordinatını bul
+	var gameScene uintptr
+	var bombOrigin Vector3
+	err = read(procHandle, plantedC4+offsets.M_pGameSceneNode, &gameScene)
+	if err == nil && gameScene != 0 {
+		read(procHandle, gameScene+offsets.M_nodeToWorld, &bombOrigin)
+	}
+
+	var viewMatrix Matrix
+	read(procHandle, clientDll+offsets.DwViewMatrix, &viewMatrix)
+	bx, by := worldToScreen(viewMatrix, bombOrigin)
+
+	setBkMode.Call(uintptr(hdc), 1)
+	
+	// Ekranın Üst Kısmında Büyük Bilgi Kutusu
+	timerStr := fmt.Sprintf("BOMB: %.1fS", timeLeft)
+	textPtr, _ := windows.UTF16PtrFromString(timerStr)
+	win.SetTextColor(hdc, win.RGB(rCol, gCol, 0))
+	setTextAlign.Call(uintptr(hdc), 0x00000006) // Center aligned
+	textOutProc.Call(uintptr(hdc), uintptr(screenWidth/2), 20, uintptr(unsafe.Pointer(textPtr)), uintptr(len(timerStr)))
+
+	// Eğer bomba ekranda görünüyorsa etrafına da sayaç ve ok çiz
+	if bx > 0 && by > 0 && bx < float32(screenWidth) && by < float32(screenHeight) {
+		win.SelectObject(hdc, win.HGDIOBJ(gradientPen))
+		win.Ellipse(hdc, int32(bx)-15, int32(by)-15, int32(bx)+15, int32(by)+15)
+
+		// Bombaya doğru yön oku çizimi (Merkezden bombaya çizgi/ok)
+		centerX := float32(screenWidth / 2)
+		centerY := float32(screenHeight / 2)
+		win.MoveToEx(hdc, int(centerX), int(centerY), nil)
+		win.LineTo(hdc, int32(bx), int32(by))
+	}
+}
+
 func drawSkeleton(hdc win.HDC, pen uintptr, bones map[string]Vector2) {
 	win.SelectObject(hdc, win.HGDIOBJ(pen))
 	win.MoveToEx(hdc, int(bones["head"].X), int(bones["head"].Y), nil)
@@ -758,12 +844,10 @@ func drawHitmarker(hdc win.HDC, pen uintptr, screenWidth, screenHeight uintptr) 
 	gap := 4
 
 	win.SelectObject(hdc, win.HGDIOBJ(pen))
-
 	win.MoveToEx(hdc, centerX-size, centerY-size, nil)
 	win.LineTo(hdc, int32(centerX-gap), int32(centerY-gap))
 	win.MoveToEx(hdc, centerX+gap, centerY+gap, nil)
 	win.LineTo(hdc, int32(centerX+size), int32(centerY+size))
-
 	win.MoveToEx(hdc, centerX+size, centerY-size, nil)
 	win.LineTo(hdc, int32(centerX+gap), int32(centerY-gap))
 	win.MoveToEx(hdc, centerX-gap, centerY+gap, nil)
@@ -776,10 +860,8 @@ func createDynamicHealthPen(hp int32) uintptr {
 	} else if hp > 100 {
 		hp = 100
 	}
-
 	r := byte((100 - hp) * 255 / 100)
 	g := byte(hp * 255 / 100)
-
 	color := uintptr(r) | (uintptr(g) << 8)
 	pen, _, _ := createPen.Call(win.PS_SOLID, 2, color)
 	return pen
@@ -814,11 +896,9 @@ func renderEntityInfo(hdc win.HDC, tPen uintptr, gPen uintptr, oPen uintptr, hPe
 
 	if healthBarRendering {
 		dynamicHpPen := createDynamicHealthPen(hp)
-
 		win.SelectObject(hdc, win.HGDIOBJ(dynamicHpPen))
 		win.MoveToEx(hdc, int(rect.Left)-4, int(rect.Bottom)+1-int(float64(int(rect.Bottom)+1-int(rect.Top))*float64(hp)/100.0), nil)
 		win.LineTo(hdc, int32(rect.Left)-4, int32(rect.Bottom)+1)
-
 		win.DeleteObject(win.HGDIOBJ(dynamicHpPen))
 
 		win.SelectObject(hdc, win.HGDIOBJ(oPen))
@@ -833,9 +913,7 @@ func renderEntityInfo(hdc win.HDC, tPen uintptr, gPen uintptr, oPen uintptr, hPe
 		if armor > 100 {
 			armor = 100
 		}
-		
 		yPos := int(rect.Bottom) + 1 - int(float64(int(rect.Bottom)+1-int(rect.Top))*float64(armor)/100.0)
-
 		win.SelectObject(hdc, win.HGDIOBJ(aPen))
 		win.MoveToEx(hdc, int(rect.Right)+4, yPos, nil)
 		win.LineTo(hdc, int32(rect.Right)+4, int32(rect.Bottom)+1)
@@ -881,29 +959,22 @@ func drawInGameMenu(hdc win.HDC) {
 	setBkMode.Call(uintptr(hdc), 1)
 
 	menuBrush, _, _ := createSolidBrush.Call(uintptr(0x12141a))
-	
 	r, g, b := hsvToRGB(currentHue, 1.0, 1.0)
 	rgbColorRef := uintptr(r) | (uintptr(g) << 8) | (uintptr(b) << 16)
-	
 	menuBorderPen, _, _ := createPen.Call(win.PS_SOLID, 2, rgbColorRef)
 	
 	selectObject.Call(uintptr(hdc), menuBrush)
 	selectObject.Call(uintptr(hdc), menuBorderPen)
 
-	rectangleProc.Call(uintptr(hdc), 30, 30, 350, 415)
+	rectangleProc.Call(uintptr(hdc), 30, 30, 350, 445) // Menü boyutu uzatıldı
 
 	deleteObject.Call(menuBrush)
 	deleteObject.Call(menuBorderPen)
 
 	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 255, 255)))
-	
 	title := fmt.Sprintf("--- MESNEVI EXTERNAL v%s ---", currentVersion)
 	titleUTF16, _ := windows.UTF16FromString(title)
-	textOutProc.Call(
-	uintptr(hdc), 50, 45,
-	uintptr(unsafe.Pointer(&titleUTF16[0])),
-	uintptr(len(titleUTF16)-1),
-)
+	textOutProc.Call(uintptr(hdc), 50, 45, uintptr(unsafe.Pointer(&titleUTF16[0])), uintptr(len(titleUTF16)-1))
 
 	currentColor := colorNames[skeletonColorIndex]
 
@@ -922,6 +993,7 @@ func drawInGameMenu(hdc win.HDC) {
 		{"[F8] ESP Tema Rengi", "[" + currentColor + "]", true},
 		{"[F9] Armor Bar", getStatusText(armorBarRendering), armorBarRendering},
 		{"[F10] Hitmarker & Sound", getStatusText(hitmarkerRendering), hitmarkerRendering},
+		{"[F12] Bomb Timer & Arrow", getStatusText(bombTimerRendering), bombTimerRendering},
 		{"[F11] Config Kaydet", "[ KAYDET ]", true},
 		{"[DELETE] Panic Button", "[ ACİL ÇIKIŞ ]", true},
 	}
@@ -1103,6 +1175,10 @@ func listenHotkeys() {
 			hitSoundRendering = hitmarkerRendering
 			playBeep(hitmarkerRendering)
 		}
+		if isKeyPressed(0x7B) { // F12 -> Bomb Timer & Arrow
+			bombTimerRendering = !bombTimerRendering
+			playBeep(bombTimerRendering)
+		}
 		if isKeyPressed(0x7A) { // F11 -> Config Kaydet
 			saveConfig()
 			playBeep(true)
@@ -1121,11 +1197,9 @@ func listenHotkeys() {
 }
 
 func main() {
-	// Güncelleme kontrolü aktif edildi
 	checkForUpdates()
 
 	setPriorityClass.Call(uintptr(windows.CurrentProcess()), 0x00008000)
-	
 	go listenHotkeys()
 
 	screenWidth, _, _ := getSystemMetrics.Call(0)
@@ -1175,7 +1249,6 @@ func main() {
 	}
 	defer deleteObject.Call(bgBrush)
 
-	// Tema Renkleri
 	blueThemePen, _, _ := createPen.Call(win.PS_SOLID, 1, 0xff8e78)
 	greenThemePen, _, _ := createPen.Call(win.PS_SOLID, 1, 0x7dff78)
 	redThemePen, _, _ := createPen.Call(win.PS_SOLID, 1, 0x7a78ff)
@@ -1194,7 +1267,7 @@ func main() {
 	defer deleteObject.Call(armorPen)
 
 	hitmarkerPen, _, _ = createPen.Call(win.PS_SOLID, 2, 0xffffff)
-	if hitmarkerPen == 0 { return }
+	if hitmarkerPens := hitmarkerPen; hitmarkerPens == 0 { return }
 	defer deleteObject.Call(hitmarkerPen)
 
 	if skeletonColorIndex >= len(themePens) {
@@ -1240,6 +1313,9 @@ func main() {
 		if hitmarkerRendering && time.Since(lastHitTime) < 300*time.Millisecond {
 			drawHitmarker(win.HDC(memhdc), hitmarkerPen, screenWidth, screenHeight)
 		}
+
+		// Yeni Eklenen Bomb Timer ve Ok Fonksiyonu Çağrısı
+		drawBombTimer(win.HDC(memhdc), procHandle, clientDll, screenWidth, screenHeight, offsets)
 
 		drawInGameMenu(win.HDC(memhdc))
 
