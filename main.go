@@ -203,12 +203,14 @@ func init() {
 	loadConfig()
 }
 
+// ---- Eksiksiz Güncelleme Mekanizması ve Loglar ----
 func checkForUpdates() {
 	if currentVersion == "dev" {
 		return
 	}
 
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", githubRepo, currentVersion)
+
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(apiURL)
 	if err != nil {
@@ -236,21 +238,28 @@ func checkForUpdates() {
 		return
 	}
 
+	fmt.Printf("[DEBUG] Remote BuildStamp: %d (%s)\n", remoteStamp, time.Unix(remoteStamp, 0).Format("2006-01-02 15:04:05"))
+	fmt.Printf("[DEBUG] Local  BuildStamp: %d (%s)\n", localStamp, time.Unix(localStamp, 0).Format("2006-01-02 15:04:05"))
+
 	if remoteStamp <= localStamp {
+		fmt.Println("[*] Guncel. Baslatiliyor...")
 		return
 	}
 
 	fmt.Printf("\n[!] Yeni build bulundu (%s). Guncellemek ister misin? [Y/N]: ", time.Unix(remoteStamp, 0).Format("2006-01-02 15:04"))
+
 	var choice string
 	_, _ = fmt.Scanln(&choice)
 	choice = strings.TrimSpace(strings.ToUpper(choice))
 
 	if choice != "Y" && choice != "EVET" {
+		fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
 		return
 	}
 
 	for _, asset := range release.Assets {
 		if asset.Name == "mesnevi.exe" {
+			fmt.Println("[*] Guncelleme indiriliyor...")
 			downloadAndUpdate(asset.BrowserDownloadURL)
 			break
 		}
@@ -264,14 +273,17 @@ func downloadAndUpdate(downloadURL string) {
 	}
 
 	tmpPath := exePath + ".tmp"
+
 	client := &http.Client{Timeout: 2 * time.Minute}
 	resp, err := client.Get(downloadURL)
 	if err != nil {
+		fmt.Println("[-] Indirme hatasi:", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
+		fmt.Println("[-] Indirme basarisiz, HTTP:", resp.StatusCode)
 		return
 	}
 
@@ -308,6 +320,7 @@ del "%%~f0"
 
 	os.Exit(0)
 }
+// --------------------------------------------------
 
 func getConfigPath() string {
 	exeDir, err := os.Executable()
@@ -787,18 +800,15 @@ func drawBombTimer(hdc win.HDC, procHandle windows.Handle, clientDll uintptr, sc
 
 	setBkMode.Call(uintptr(hdc), 1)
 
-	// Eğer bomba ekranda görünüyorsa daireyi, çizgiyi ve bombanın hemen üstündeki yazıyı çiz
 	if bx > 0 && by > 0 && bx < float32(screenWidth) && by < float32(screenHeight) {
 		win.SelectObject(hdc, win.HGDIOBJ(gradientPen))
 		win.Ellipse(hdc, int32(bx)-15, int32(by)-15, int32(bx)+15, int32(by)+15)
 
-		// Merkezden bombaya yön oku/çizgi
 		centerX := float32(screenWidth / 2)
 		centerY := float32(screenHeight / 2)
 		win.MoveToEx(hdc, int(centerX), int(centerY), nil)
 		win.LineTo(hdc, int32(bx), int32(by))
 
-		// Bombanın dairesinin hemen üstüne süreyi yaz
 		timerStr := fmt.Sprintf("%.1fS", timeLeft)
 		textPtr, _ := windows.UTF16PtrFromString(timerStr)
 		win.SetTextColor(hdc, win.RGB(rCol, gCol, 0))
@@ -1191,6 +1201,7 @@ func listenHotkeys() {
 }
 
 func main() {
+	// Güncelleme kontrolü aktif
 	checkForUpdates()
 
 	setPriorityClass.Call(uintptr(windows.CurrentProcess()), 0x00008000)
