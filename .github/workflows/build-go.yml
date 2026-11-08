@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       build_v187:
-        description: 'v1.8.7main branchini build et'
+        description: 'v1.8.8main branchini build et'
         required: true
         type: boolean
         default: true
       build_v188:
-        description: 'v1.8.8neon branchini build et'
+        description: 'v1.8.9neon branchini build et'
         required: true
         type: boolean
         default: true
@@ -27,12 +27,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target_branch: "v1.8.7main"
-            version: "1.8.7"
-            enable: ${{ inputs.build_v187 == true || github.event_name == 'push' }}
-          - target_branch: "v1.8.8neon"
+          - target_branch: "v1.8.8main"
             version: "1.8.8"
             enable: ${{ inputs.build_v188 == true || github.event_name == 'push' }}
+          - target_branch: "v1.8.9neon"
+            version: "1.8.9"
+            enable: ${{ inputs.build_v189 == true || github.event_name == 'push' }}
 
     steps:
     - name: Check if branch is enabled
