@@ -3,12 +3,12 @@ name: Build All Branches (Pure CLI)
 on:
   workflow_dispatch:
     inputs:
-      build_v187:
+      build_v188:
         description: 'v1.8.8main branchini build et'
         required: true
         type: boolean
         default: true
-      build_v188:
+      build_v189:
         description: 'v1.8.9neon branchini build et'
         required: true
         type: boolean
