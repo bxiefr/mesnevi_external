@@ -82,6 +82,8 @@ jobs:
                   "dwViewMatrix": parse_val(client_offsets.get("dwViewMatrix")),
                   "dwLocalPlayerPawn": parse_val(client_offsets.get("dwLocalPlayerPawn")),
                   "dwEntityList": parse_val(client_offsets.get("dwEntityList")),
+                  "dwPlantedC4": parse_val(client_offsets.get("dwPlantedC4")),
+                  "dwGlobalVars": parse_val(client_offsets.get("dwGlobalVars")),
                   "m_hPlayerPawn": get_field_offset("CCSPlayerController", "m_hPlayerPawn") or parse_val(client_offsets.get("m_hPlayerPawn")),
                   "m_iHealth": get_field_offset("C_BaseEntity", "m_iHealth") or parse_val(client_offsets.get("m_iHealth")),
                   "m_lifeState": get_field_offset("C_BaseEntity", "m_lifeState") or parse_val(client_offsets.get("m_lifeState")),
@@ -94,7 +96,8 @@ jobs:
                   "m_sSanitizedPlayerName": get_field_offset("CCSPlayerController", "m_sSanitizedPlayerName") or parse_val(client_offsets.get("m_sSanitizedPlayerName")),
                   "m_ArmorValue": get_field_offset("CCSPlayerController", "m_ArmorValue") or get_field_offset("C_CSPlayerPawn", "m_ArmorValue") or parse_val(client_offsets.get("m_ArmorValue")),
                   "m_pBulletServices": get_field_offset("C_CSPlayerPawn", "m_pBulletServices") or parse_val(client_offsets.get("m_pBulletServices")),
-                  "m_totalHitsOnServer": get_field_offset("CCSPlayerController", "m_totalHitsOnServer") or get_field_offset("CCSPlayer_BulletServices", "m_totalHitsOnServer") or parse_val(client_offsets.get("m_totalHitsOnServer"))
+                  "m_totalHitsOnServer": get_field_offset("CCSPlayerController", "m_totalHitsOnServer") or get_field_offset("CCSPlayer_BulletServices", "m_totalHitsOnServer") or parse_val(client_offsets.get("m_totalHitsOnServer")),
+                  "m_flC4Blow": get_field_offset("CPlantedC4", "m_flC4Blow") or get_field_offset("CCSPlayerPawn", "m_flC4Blow") or 0
               }
 
           def get_a2x():
@@ -109,10 +112,14 @@ jobs:
                   fields = classes.get(class_name, {}).get("fields", {})
                   return parse_val(fields.get(field_name))
 
+              client_offsets = raw_offsets.get("client.dll", {})
+
               return {
-                  "dwViewMatrix": parse_val(raw_offsets.get("client.dll", {}).get("dwViewMatrix")),
-                  "dwLocalPlayerPawn": parse_val(raw_offsets.get("client.dll", {}).get("dwLocalPlayerPawn")),
-                  "dwEntityList": parse_val(raw_offsets.get("client.dll", {}).get("dwEntityList")),
+                  "dwViewMatrix": parse_val(client_offsets.get("dwViewMatrix")),
+                  "dwLocalPlayerPawn": parse_val(client_offsets.get("dwLocalPlayerPawn")),
+                  "dwEntityList": parse_val(client_offsets.get("dwEntityList")),
+                  "dwPlantedC4": parse_val(client_offsets.get("dwPlantedC4")),
+                  "dwGlobalVars": parse_val(client_offsets.get("dwGlobalVars")),
                   "m_hPlayerPawn": get_field_offset("CCSPlayerController", "m_hPlayerPawn"),
                   "m_iHealth": get_field_offset("C_BaseEntity", "m_iHealth"),
                   "m_lifeState": get_field_offset("C_BaseEntity", "m_lifeState"),
@@ -125,7 +132,8 @@ jobs:
                   "m_sSanitizedPlayerName": get_field_offset("CCSPlayerController", "m_sSanitizedPlayerName"),
                   "m_ArmorValue": get_field_offset("CCSPlayerController", "m_ArmorValue") or get_field_offset("C_CSPlayerPawn", "m_ArmorValue"),
                   "m_pBulletServices": get_field_offset("C_CSPlayerPawn", "m_pBulletServices"),
-                  "m_totalHitsOnServer": get_field_offset("CCSPlayerController", "m_totalHitsOnServer") or get_field_offset("CCSPlayer_BulletServices", "m_totalHitsOnServer")
+                  "m_totalHitsOnServer": get_field_offset("CCSPlayerController", "m_totalHitsOnServer") or get_field_offset("CCSPlayer_BulletServices", "m_totalHitsOnServer"),
+                  "m_flC4Blow": get_field_offset("CPlantedC4", "m_flC4Blow") or get_field_offset("CCSPlayerPawn", "m_flC4Blow") or 0
               }
 
           my_offsets = None
@@ -161,26 +169,21 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-          # Tüm uzak branch bilgilerini güncelle
           git fetch origin
 
-          # Güncellenecek tüm branch'lerin listesi
           branches=("v1.8.7main" "v1.8.8neon")
 
           for branch in "${branches[@]}"; do
             echo "Processing branch: $branch"
             git checkout "$branch" || git checkout -b "$branch" origin/"$branch"
 
-            # Yeni offsets dosyasını kopyala (varsa eskisinin üzerine yazar)
             cp new_offsets.json offsets.json
 
-            # Git'e ekle ve değişiklik var mı yok mu takılmadan doğrudan commit at
             git add offsets.json
             git commit -m "chore: auto-update offsets.json for $branch" || echo "No changes to commit for $branch"
             git push origin "$branch" || echo "Push skipped or failed for $branch"
           done
 
-          # Temizlik
           rm -f new_offsets.json
 
       - name: Update status.json on cli branch
