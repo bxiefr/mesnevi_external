@@ -35,7 +35,6 @@ var embeddedHitSound []byte
 // GitHub Güncelleme Ayarları
 const githubRepo = "bxiefr/mesnevi_external"
 
-// Bunlar build sırasında -ldflags ile enjekte edilir
 var (
 	currentVersion = "dev"
 	buildStamp     = "0"
@@ -108,18 +107,18 @@ type Offset struct {
 }
 
 type Config struct {
-	TeamCheck             bool `json:"teamCheck"`
-	HeadCircle            bool `json:"headCircle"`
-	SkeletonRendering     bool `json:"skeletonRendering"`
-	BoxRendering          bool `json:"boxRendering"`
-	NameRendering         bool `json:"nameRendering"`
-	HealthBarRendering    bool `json:"healthBarRendering"`
-	ArmorBarRendering     bool `json:"armorBarRendering"`
-	HealthTextRendering   bool `json:"healthTextRendering"`
-	DistanceRendering     bool `json:"distanceRendering"`
-	HitmarkerRendering    bool `json:"hitmarkerRendering"`
-	HitSoundRendering     bool `json:"hitSoundRendering"`
-	SkeletonColorIndex    int  `json:"skeletonColorIndex"`
+	TeamCheck          bool `json:"teamCheck"`
+	HeadCircle         bool `json:"headCircle"`
+	SkeletonRendering  bool `json:"skeletonRendering"`
+	BoxRendering       bool `json:"boxRendering"`
+	NameRendering      bool `json:"nameRendering"`
+	HealthBarRendering bool `json:"healthBarRendering"`
+	ArmorBarRendering  bool `json:"armorBarRendering"`
+	HealthTextRendering bool `json:"healthTextRendering"`
+	DistanceRendering  bool `json:"distanceRendering"`
+	HitmarkerRendering bool `json:"hitmarkerRendering"`
+	HitSoundRendering  bool `json:"hitSoundRendering"`
+	SkeletonColorIndex int  `json:"skeletonColorIndex"`
 }
 
 var (
@@ -159,40 +158,37 @@ const (
 )
 
 var (
-	teamCheck            bool    = true
-	headCircle           bool    = true
-	skeletonRendering    bool    = true
-	boxRendering         bool    = true
-	nameRendering        bool    = true
-	healthBarRendering   bool    = true
-	armorBarRendering    bool    = true
-	healthTextRendering  bool    = true
-	distanceRendering    bool    = true
-	hitmarkerRendering   bool    = true
-	hitSoundRendering    bool    = true
-	menuOpen             bool    = true
-	frameDelay           uint32  = 15
-	currentHue           float64 = 0
+	teamCheck          bool    = true
+	headCircle         bool    = true
+	skeletonRendering  bool    = true
+	boxRendering       bool    = true
+	nameRendering      bool    = true
+	healthBarRendering bool    = true
+	armorBarRendering  bool    = true
+	healthTextRendering bool   = true
+	distanceRendering  bool    = true
+	hitmarkerRendering bool    = true
+	hitSoundRendering  bool    = true
+	menuOpen           bool    = true
+	frameDelay         uint32  = 15
+	currentHue         float64 = 0
 
-	lastHits             int32 = -1
-	lastHitTime          time.Time
-	cachedHitPath        string
+	lastHits           int32 = -1
+	lastHitTime        time.Time
+	cachedHitPath      string
 )
 
 var (
-	bgBrush              uintptr
-	redPen               uintptr
-	greenPen             uintptr
-	bluePen              uintptr
-	bonePen              uintptr
-	blueBonePen          uintptr
-	greenBonePen         uintptr
-	redBonePen           uintptr
-	outlinePen           uintptr
-	armorPen             uintptr
-	hitmarkerPen         uintptr
-	skeletonColor        uintptr
-	skeletonColorIndex   int
+	bgBrush            uintptr
+	outlinePen         uintptr
+	armorPen           uintptr
+	hitmarkerPen       uintptr
+	skeletonColor      uintptr
+	skeletonColorIndex int
+
+	// Genişletilmiş Tema Renkleri (İskelet, Kutu ve Head Circle için ortak)
+	colorNames = []string{"MAVİ", "YEŞİL", "KIRMIZI", "SARI", "MOR", "TURKUAZ"}
+	themePens  []uintptr
 )
 
 func init() {
@@ -208,7 +204,6 @@ func checkForUpdates() {
 		return
 	}
 
-	// Kendi sürümünün release'ine bak (1.8.7 / 1.8.8 karışmasın)
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", githubRepo, currentVersion)
 
 	client := &http.Client{Timeout: 5 * time.Second}
@@ -229,7 +224,7 @@ func checkForUpdates() {
 
 	m := stampRe.FindStringSubmatch(release.Body)
 	if m == nil {
-		return // release notunda damga yok, güncelleme sayma
+		return
 	}
 
 	remoteStamp, err1 := strconv.ParseInt(m[1], 10, 64)
@@ -238,11 +233,7 @@ func checkForUpdates() {
 		return
 	}
 
-	fmt.Printf("[DEBUG] Remote BuildStamp: %d (%s)\n", remoteStamp, time.Unix(remoteStamp, 0).Format("2006-01-02 15:04:05"))
-	fmt.Printf("[DEBUG] Local  BuildStamp: %d (%s)\n", localStamp, time.Unix(localStamp, 0).Format("2006-01-02 15:04:05"))
-
 	if remoteStamp <= localStamp {
-		fmt.Println("[*] Guncel. Baslatiliyor...")
 		return
 	}
 
@@ -253,13 +244,11 @@ func checkForUpdates() {
 	choice = strings.TrimSpace(strings.ToUpper(choice))
 
 	if choice != "Y" && choice != "EVET" {
-		fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
 		return
 	}
 
 	for _, asset := range release.Assets {
 		if asset.Name == "mesnevi.exe" {
-			fmt.Println("[*] Guncelleme indiriliyor...")
 			downloadAndUpdate(asset.BrowserDownloadURL)
 			break
 		}
@@ -277,13 +266,11 @@ func downloadAndUpdate(downloadURL string) {
 	client := &http.Client{Timeout: 2 * time.Minute}
 	resp, err := client.Get(downloadURL)
 	if err != nil {
-		fmt.Println("[-] Indirme hatasi:", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		fmt.Println("[-] Indirme basarisiz, HTTP:", resp.StatusCode)
 		return
 	}
 
@@ -293,7 +280,7 @@ func downloadAndUpdate(downloadURL string) {
 	}
 
 	_, err = io.Copy(out, resp.Body)
-	out.Close() // defer değil, manuel kapat (dosya kilitli kalmasın)
+	out.Close()
 
 	if err != nil {
 		os.Remove(tmpPath)
@@ -331,18 +318,18 @@ func getConfigPath() string {
 
 func saveConfig() {
 	cfg := Config{
-		TeamCheck:           teamCheck,
-		HeadCircle:          headCircle,
-		SkeletonRendering:   skeletonRendering,
-		BoxRendering:        boxRendering,
-		NameRendering:       nameRendering,
-		HealthBarRendering:  healthBarRendering,
-		ArmorBarRendering:   armorBarRendering,
+		TeamCheck:          teamCheck,
+		HeadCircle:         headCircle,
+		SkeletonRendering:  skeletonRendering,
+		BoxRendering:       boxRendering,
+		NameRendering:      nameRendering,
+		HealthBarRendering: healthBarRendering,
+		ArmorBarRendering:  armorBarRendering,
 		HealthTextRendering: healthTextRendering,
-		DistanceRendering:   distanceRendering,
-		HitmarkerRendering:  hitmarkerRendering,
-		HitSoundRendering:   hitSoundRendering,
-		SkeletonColorIndex:  skeletonColorIndex,
+		DistanceRendering:  distanceRendering,
+		HitmarkerRendering: hitmarkerRendering,
+		HitSoundRendering:  hitSoundRendering,
+		SkeletonColorIndex: skeletonColorIndex,
 	}
 
 	data, err := json.MarshalIndent(cfg, "", "  ")
@@ -475,22 +462,22 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		localPlayerP         uintptr
 		localPlayerGameScene uintptr
 		localPlayerSceneOrigin Vector3
-		localTeam          int32
-		listEntry          uintptr
-		gameScene          uintptr
-		entityController   uintptr
+		localTeam            int32
+		listEntry            uintptr
+		gameScene            uintptr
+		entityController     uintptr
 		entityControllerPawn uintptr
-		entityPawn         uintptr
-		entityNameAddress  uintptr
-		entityBoneArray    uintptr
-		entityTeam         int32
-		entityHealth       int32
-		entityArmor        int32
-		entityLifeState    int32
-		entityName         string
-		sanitizedNameStr   string
-		entityOrigin       Vector3
-		viewMatrix         Matrix
+		entityPawn           uintptr
+		entityNameAddress    uintptr
+		entityBoneArray      uintptr
+		entityTeam           int32
+		entityHealth         int32
+		entityArmor          int32
+		entityLifeState      int32
+		entityName           string
+		sanitizedNameStr     string
+		entityOrigin         Vector3
+		viewMatrix           Matrix
 	)
 	bones := map[string]int{
 		"head":        6,
@@ -703,7 +690,8 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 				boneX, boneY := worldToScreen(viewMatrix, currentBone)
 				entityBones[boneName] = Vector2{boneX, boneY}
 			}
-		}          
+		}        
+		
 		entityHeadTop = Vector3{entityHead.X, entityHead.Y, entityHead.Z + 7}
 		entityHeadBottom = Vector3{entityHead.X, entityHead.Y, entityHead.Z - 5}
 		screenPosHeadX, screenPosHeadTopY := worldToScreen(viewMatrix, entityHeadTop)
@@ -902,14 +890,13 @@ func drawInGameMenu(hdc win.HDC) {
 	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 255, 255)))
 	
 	title := fmt.Sprintf("--- MESNEVI EXTERNAL v%s ---", currentVersion)
-    titleUTF16, _ := windows.UTF16FromString(title)
-    textOutProc.Call(
+	titleUTF16, _ := windows.UTF16FromString(title)
+	textOutProc.Call(
 	uintptr(hdc), 50, 45,
 	uintptr(unsafe.Pointer(&titleUTF16[0])),
-	uintptr(len(titleUTF16)-1), // sondaki null karakteri sayma
+	uintptr(len(titleUTF16)-1),
 )
 
-	colorNames := []string{"MAVİ", "YEŞİL", "KIRMIZI"}
 	currentColor := colorNames[skeletonColorIndex]
 
 	items := []struct {
@@ -924,7 +911,7 @@ func drawInGameMenu(hdc win.HDC) {
 		{"[F5] Health Bar", getStatusText(healthBarRendering), healthBarRendering},
 		{"[F6] Player Name", getStatusText(nameRendering), nameRendering},
 		{"[F7] Distance Display", getStatusText(distanceRendering), distanceRendering},
-		{"[F8] Skeleton Color", "[" + currentColor + "]", true},
+		{"[F8] ESP Tema Rengi", "[" + currentColor + "]", true},
 		{"[F9] Armor Bar", getStatusText(armorBarRendering), armorBarRendering},
 		{"[F10] Hitmarker & Sound", getStatusText(hitmarkerRendering), hitmarkerRendering},
 		{"[F11] Config Kaydet", "[ KAYDET ]", true},
@@ -937,9 +924,17 @@ func drawInGameMenu(hdc win.HDC) {
 		labelPtr, _ := windows.UTF16PtrFromString(item.label)
 		textOutProc.Call(uintptr(hdc), 45, uintptr(startY), uintptr(unsafe.Pointer(labelPtr)), uintptr(len(item.label)))
 
+		isColorStatus := false
+		for _, cName := range colorNames {
+			if item.status == "["+cName+"]" {
+				isColorStatus = true
+				break
+			}
+		}
+
 		if item.label == "[F11] Config Kaydet" {
 			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 200, 255)))
-		} else if item.active && (item.status == "[ AÇIK ]" || item.status == "[ MAVİ ]" || item.status == "[ YEŞİL ]" || item.status == "[ KIRMIZI ]") {
+		} else if item.active && (item.status == "[ AÇIK ]" || isColorStatus) {
 			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 255, 100)))
 		} else if item.status == "[ KAPALI ]" {
 			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 60, 60)))
@@ -1058,15 +1053,9 @@ func listenHotkeys() {
 			menuOpen = !menuOpen
 			playBeep(menuOpen)
 		}
-		if isKeyPressed(0x77) { // F8 -> İskelet Rengi Değiştir
-			skeletonColorIndex = (skeletonColorIndex + 1) % 3
-			if skeletonColorIndex == 0 {
-				skeletonColor = blueBonePen
-			} else if skeletonColorIndex == 1 {
-				skeletonColor = greenBonePen
-			} else if skeletonColorIndex == 2 {
-				skeletonColor = redBonePen
-			}
+		if isKeyPressed(0x77) { // F8 -> ESP Tema Rengi Değiştir
+			skeletonColorIndex = (skeletonColorIndex + 1) % len(colorNames)
+			skeletonColor = themePens[skeletonColorIndex]
 			playBeep(true)
 		}
 		if isKeyPressed(0x70) { // F1 -> Box ESP
@@ -1124,23 +1113,11 @@ func listenHotkeys() {
 }
 
 func main() {
-
-	// Program açılışında bir kere güncelleme kontrolü yap ve kullanıcıya sor
 	checkForUpdates()
 
 	setPriorityClass.Call(uintptr(windows.CurrentProcess()), 0x00008000)
 	
 	go listenHotkeys()
-
-	if skeletonColorIndex == 0 {
-		skeletonColor = blueBonePen
-	} else if skeletonColorIndex == 1 {
-		skeletonColor = greenBonePen
-	} else if skeletonColorIndex == 2 {
-		skeletonColor = redBonePen
-	} else {
-		skeletonColor = blueBonePen
-	}
 
 	screenWidth, _, _ := getSystemMetrics.Call(0)
 	screenHeight, _, _ := getSystemMetrics.Call(1)
@@ -1189,33 +1166,15 @@ func main() {
 	}
 	defer deleteObject.Call(bgBrush)
 
-	redPen, _, _ = createPen.Call(win.PS_SOLID, 1, 0x7a78ff)
-	if redPen == 0 { return }
-	defer deleteObject.Call(redPen)
+	// Tema Renk Kalemi Tanımlamaları (Mavi, Yeşil, Kırmızı, Sarı, Mor, Turkuaz)
+	blueThemePen, _, _ := createPen.Call(win.PS_SOLID, 1, 0xff8e78)
+	greenThemePen, _, _ := createPen.Call(win.PS_SOLID, 1, 0x7dff78)
+	redThemePen, _, _ := createPen.Call(win.PS_SOLID, 1, 0x7a78ff)
+	yellowThemePen, _, _ := createPen.Call(win.PS_SOLID, 1, 0x00d7ff)
+	purpleThemePen, _, _ := createPen.Call(win.PS_SOLID, 1, 0x800080)
+	cyanThemePen, _, _ := createPen.Call(win.PS_SOLID, 1, 0xffff00)
 
-	greenPen, _, _ = createPen.Call(win.PS_SOLID, 1, 0x7dff78)
-	if greenPen == 0 { return }
-	defer deleteObject.Call(greenPen)
-
-	bluePen, _, _ = createPen.Call(win.PS_SOLID, 1, 0xff8e78)
-	if bluePen == 0 { return }
-	defer deleteObject.Call(bluePen)
-
-	bonePen, _, _ = createPen.Call(win.PS_SOLID, 1, 0xffffff)
-	if bonePen == 0 { return }
-	defer deleteObject.Call(bonePen)
-
-	blueBonePen, _, _ = createPen.Call(win.PS_SOLID, 1, 0xff8e78)
-	if blueBonePen == 0 { return }
-	defer deleteObject.Call(blueBonePen)
-
-	greenBonePen, _, _ = createPen.Call(win.PS_SOLID, 1, 0x7dff78)
-	if greenBonePen == 0 { return }
-	defer deleteObject.Call(greenBonePen)
-
-	redBonePen, _, _ = createPen.Call(win.PS_SOLID, 1, 0x7a78ff)
-	if redBonePen == 0 { return }
-	defer deleteObject.Call(redBonePen)
+	themePens = []uintptr{blueThemePen, greenThemePen, redThemePen, yellowThemePen, purpleThemePen, cyanThemePen}
 
 	outlinePen, _, _ = createPen.Call(win.PS_SOLID, 1, 0x000000)
 	if outlinePen == 0 { return }
@@ -1229,7 +1188,10 @@ func main() {
 	if hitmarkerPen == 0 { return }
 	defer deleteObject.Call(hitmarkerPen)
 
-	skeletonColor = blueBonePen
+	if skeletonColorIndex >= len(themePens) {
+		skeletonColorIndex = 0
+	}
+	skeletonColor = themePens[skeletonColorIndex]
 
 	font, _, _ := createFont.Call(14, 0, 0, 0, win.FW_BOLD, 0, 0, 0, win.DEFAULT_CHARSET, win.OUT_DEFAULT_PRECIS, win.CLIP_DEFAULT_PRECIS, win.DEFAULT_QUALITY, win.DEFAULT_PITCH|win.FF_DONTCARE, 0)
 
@@ -1252,6 +1214,10 @@ func main() {
 		selectObject.Call(uintptr(memhdc), bgBrush)
 		selectObject.Call(uintptr(memhdc), font)
 
+		// Aktif tema rengini güncelle
+		activeThemePen := themePens[skeletonColorIndex]
+		skeletonColor = activeThemePen
+
 		entities := getEntitiesInfo(procHandle, clientDll, screenWidth, screenHeight, offsets)
 		for _, entity := range entities {
 			if entity.Distance < 0.8 {
@@ -1260,11 +1226,8 @@ func main() {
 			if skeletonRendering {
 				drawSkeleton(win.HDC(memhdc), skeletonColor, entity.Bones)
 			}
-			if entity.Team == 2 {
-				renderEntityInfo(win.HDC(memhdc), redPen, greenPen, outlinePen, bonePen, armorPen, entity.Rect, entity.Health, entity.Armor, entity.Name, entity.HeadPos, entity.Distance)
-			} else {
-				renderEntityInfo(win.HDC(memhdc), bluePen, greenPen, outlinePen, bonePen, armorPen, entity.Rect, entity.Health, entity.Armor, entity.Name, entity.HeadPos, entity.Distance)
-			}
+			// Box ve Head Circle da artık F8 ile seçilen aktif tema rengini kullanıyor
+			renderEntityInfo(win.HDC(memhdc), activeThemePen, greenThemePen, outlinePen, activeThemePen, armorPen, entity.Rect, entity.Health, entity.Armor, entity.Name, entity.HeadPos, entity.Distance)
 		}
 
 		if hitmarkerRendering && time.Since(lastHitTime) < 300*time.Millisecond {
