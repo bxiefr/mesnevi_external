@@ -756,7 +756,7 @@ func drawBombTimer(hdc win.HDC, procHandle windows.Handle, clientDll uintptr, sc
 	err = read(procHandle, clientDll+offsets.DwGlobalVars, &globalVars)
 	var currentTime float32 = 0
 	if err == nil && globalVars != 0 {
-		read(procHandle, globalVars+0x14, &currentTime)
+		read(procHandle, globalVars+0x2C, &currentTime)
 	} else {
 		currentTime = float32(time.Now().Unix())
 	}
