@@ -181,6 +181,10 @@ var (
 	lastHits            int32 = -1
 	lastHitTime         time.Time
 	cachedHitPath       string
+
+	// Gerçek zamanlı bomba sayacı state değişkenleri
+	lastPlantedC4       uintptr
+	bombPlantTime       time.Time
 )
 
 var (
@@ -203,7 +207,6 @@ func init() {
 	loadConfig()
 }
 
-// ---- Eksiksiz Güncelleme Mekanizması ve Loglar ----
 func checkForUpdates() {
 	if currentVersion == "dev" {
 		return
@@ -320,7 +323,6 @@ del "%%~f0"
 
 	os.Exit(0)
 }
-// --------------------------------------------------
 
 func getConfigPath() string {
 	exeDir, err := os.Executable()
@@ -743,6 +745,7 @@ func drawBombTimer(hdc win.HDC, procHandle windows.Handle, clientDll uintptr, sc
 	var plantedC4 uintptr
 	err := read(procHandle, clientDll+offsets.DwPlantedC4, &plantedC4)
 	if err != nil || plantedC4 == 0 {
+		lastPlantedC4 = 0
 		return
 	}
 
@@ -752,26 +755,23 @@ func drawBombTimer(hdc win.HDC, procHandle windows.Handle, clientDll uintptr, sc
 		return
 	}
 
-	var globalVars uintptr
-	err = read(procHandle, clientDll+offsets.DwGlobalVars, &globalVars)
-	var currentTime float32 = 0
-	if err == nil && globalVars != 0 {
-		read(procHandle, globalVars+0x2C, &currentTime)
-	} else {
-		currentTime = float32(time.Now().Unix())
+	// Yeni bomba kurulduysa veya farklı bir bomba ise sayaç zamanını sıfırla
+	if plantedC4 != lastPlantedC4 {
+		lastPlantedC4 = plantedC4
+		bombPlantTime = time.Now()
 	}
 
-	timeLeft := c4Blow - currentTime
+	// Gerçek sistem zamanına dayalı akıcı 40 saniye geri sayım (dwGlobalVars hatası / offset değişiminden etkilenmez)
+	elapsed := time.Since(bombPlantTime).Seconds()
+	timeLeft := 40.0 - float32(elapsed)
 	if timeLeft < 0 {
 		timeLeft = 0
 	}
+	if timeLeft > 40.0 {
+		timeLeft = 40.0
+	}
 
 	ratio := float64(timeLeft) / 40.0
-	if ratio > 1.0 {
-		ratio = 1.0
-	} else if ratio < 0.0 {
-		ratio = 0.0
-	}
 
 	var rCol, gCol byte
 	if ratio > 0.5 {
@@ -1201,7 +1201,6 @@ func listenHotkeys() {
 }
 
 func main() {
-	// Güncelleme kontrolü aktif
 	checkForUpdates()
 
 	setPriorityClass.Call(uintptr(windows.CurrentProcess()), 0x00008000)
