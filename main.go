@@ -182,7 +182,6 @@ var (
 	lastHitTime         time.Time
 	cachedHitPath       string
 
-	// Gerçek zamanlı bomba sayacı state değişkenleri
 	lastPlantedC4       uintptr
 	bombPlantTime       time.Time
 )
@@ -241,11 +240,7 @@ func checkForUpdates() {
 		return
 	}
 
-	fmt.Printf("[DEBUG] Remote BuildStamp: %d (%s)\n", remoteStamp, time.Unix(remoteStamp, 0).Format("2006-01-02 15:04:05"))
-	fmt.Printf("[DEBUG] Local  BuildStamp: %d (%s)\n", localStamp, time.Unix(localStamp, 0).Format("2006-01-02 15:04:05"))
-
 	if remoteStamp <= localStamp {
-		fmt.Println("[*] Guncel. Baslatiliyor...")
 		return
 	}
 
@@ -256,13 +251,11 @@ func checkForUpdates() {
 	choice = strings.TrimSpace(strings.ToUpper(choice))
 
 	if choice != "Y" && choice != "EVET" {
-		fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
 		return
 	}
 
 	for _, asset := range release.Assets {
 		if asset.Name == "mesnevi.exe" {
-			fmt.Println("[*] Guncelleme indiriliyor...")
 			downloadAndUpdate(asset.BrowserDownloadURL)
 			break
 		}
@@ -276,17 +269,14 @@ func downloadAndUpdate(downloadURL string) {
 	}
 
 	tmpPath := exePath + ".tmp"
-
 	client := &http.Client{Timeout: 2 * time.Minute}
 	resp, err := client.Get(downloadURL)
 	if err != nil {
-		fmt.Println("[-] Indirme hatasi:", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		fmt.Println("[-] Indirme basarisiz, HTTP:", resp.StatusCode)
 		return
 	}
 
@@ -755,13 +745,11 @@ func drawBombTimer(hdc win.HDC, procHandle windows.Handle, clientDll uintptr, sc
 		return
 	}
 
-	// Yeni bomba kurulduysa veya farklı bir bomba ise sayaç zamanını sıfırla
 	if plantedC4 != lastPlantedC4 {
 		lastPlantedC4 = plantedC4
 		bombPlantTime = time.Now()
 	}
 
-	// Gerçek sistem zamanına dayalı akıcı 40 saniye geri sayım (dwGlobalVars hatası / offset değişiminden etkilenmez)
 	elapsed := time.Since(bombPlantTime).Seconds()
 	timeLeft := 40.0 - float32(elapsed)
 	if timeLeft < 0 {
@@ -800,14 +788,10 @@ func drawBombTimer(hdc win.HDC, procHandle windows.Handle, clientDll uintptr, sc
 
 	setBkMode.Call(uintptr(hdc), 1)
 
+	// Sadece bombanın dairesi ve üstündeki saniye yazısı kalacak (merkezden çizilen ok/çizgi kaldırıldı)
 	if bx > 0 && by > 0 && bx < float32(screenWidth) && by < float32(screenHeight) {
 		win.SelectObject(hdc, win.HGDIOBJ(gradientPen))
 		win.Ellipse(hdc, int32(bx)-15, int32(by)-15, int32(bx)+15, int32(by)+15)
-
-		centerX := float32(screenWidth / 2)
-		centerY := float32(screenHeight / 2)
-		win.MoveToEx(hdc, int(centerX), int(centerY), nil)
-		win.LineTo(hdc, int32(bx), int32(by))
 
 		timerStr := fmt.Sprintf("%.1fS", timeLeft)
 		textPtr, _ := windows.UTF16PtrFromString(timerStr)
