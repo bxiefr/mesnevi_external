@@ -240,7 +240,11 @@ func checkForUpdates() {
 		return
 	}
 
+	fmt.Printf("[DEBUG] Remote BuildStamp: %d (%s)\n", remoteStamp, time.Unix(remoteStamp, 0).Format("2006-01-02 15:04:05"))
+	fmt.Printf("[DEBUG] Local  BuildStamp: %d (%s)\n", localStamp, time.Unix(localStamp, 0).Format("2006-01-02 15:04:05"))
+
 	if remoteStamp <= localStamp {
+		fmt.Println("[*] Guncel. Baslatiliyor...")
 		return
 	}
 
@@ -251,11 +255,13 @@ func checkForUpdates() {
 	choice = strings.TrimSpace(strings.ToUpper(choice))
 
 	if choice != "Y" && choice != "EVET" {
+		fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
 		return
 	}
 
 	for _, asset := range release.Assets {
 		if asset.Name == "mesnevi.exe" {
+			fmt.Println("[*] Guncelleme indiriliyor...")
 			downloadAndUpdate(asset.BrowserDownloadURL)
 			break
 		}
@@ -272,11 +278,13 @@ func downloadAndUpdate(downloadURL string) {
 	client := &http.Client{Timeout: 2 * time.Minute}
 	resp, err := client.Get(downloadURL)
 	if err != nil {
+		fmt.Println("[-] Indirme hatasi:", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
+		fmt.Println("[-] Indirme basarisiz, HTTP:", resp.StatusCode)
 		return
 	}
 
@@ -788,7 +796,6 @@ func drawBombTimer(hdc win.HDC, procHandle windows.Handle, clientDll uintptr, sc
 
 	setBkMode.Call(uintptr(hdc), 1)
 
-	// Sadece bombanın dairesi ve üstündeki saniye yazısı kalacak (merkezden çizilen ok/çizgi kaldırıldı)
 	if bx > 0 && by > 0 && bx < float32(screenWidth) && by < float32(screenHeight) {
 		win.SelectObject(hdc, win.HGDIOBJ(gradientPen))
 		win.Ellipse(hdc, int32(bx)-15, int32(by)-15, int32(bx)+15, int32(by)+15)
