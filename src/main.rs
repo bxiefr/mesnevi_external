@@ -46,33 +46,28 @@ impl eframe::App for CheatApp {
         [0.0, 0.0, 0.0, 0.0]
     }
 
-    // DÜZELTME 1: update fonksiyonu &mut self almalı (incompatible type hatası çözüldü)
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         unsafe {
             if GetAsyncKeyState(0x2D) & 1 != 0 {
                 let current = self.menu_open.load(Ordering::Relaxed);
                 self.menu_open.store(!current, Ordering::Relaxed);
 
-                // DÜZELTME 2 & 3: viewport window handle çekme yöntemi güncellendi
-                if let Some(viewport_i_d) = ctx.input(|i| i.viewport().focused) {
-                    _ = viewport_i_d;
-                }
-                
-                // Windows HWND entegrasyonu için eframe alt seviye pencere erisimi
-                #cfg!(target_os = "windows");
-                let _hwnd = frame.window_handle().map(|wh| {
-                    if let raw_window_handle::RawWindowHandle::Win32(win32_handle) = wh.as_raw() {
-                        let hwnd = HWND(win32_handle.hwnd.get() as _);
-                        let ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
-                        unsafe {
-                            if !current {
-                                SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style & !(WS_EX_TRANSPARENT.0 as isize));
-                            } else {
-                                SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style | (WS_EX_TRANSPARENT.0 as isize));
+                // DÜZELTME: #cfg! yazım hatası if cfg!(target_os = "windows") olarak düzeltildi
+                if cfg!(target_os = "windows") {
+                    let _ = frame.window_handle().map(|wh| {
+                        if let raw_window_handle::RawWindowHandle::Win32(win32_handle) = wh.as_raw() {
+                            let hwnd = HWND(win32_handle.hwnd.get() as _);
+                            let ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+                            unsafe {
+                                if !current {
+                                    SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style & !(WS_EX_TRANSPARENT.0 as isize));
+                                } else {
+                                    SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style | (WS_EX_TRANSPARENT.0 as isize));
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                }
             }
         }
 
@@ -82,7 +77,6 @@ impl eframe::App for CheatApp {
             painter.circle_stroke(
                 egui::pos2(150.0, 150.0),
                 15.0,
-                // DÜZELTME 4: Float literal fallback uyarısını önlemek için türler netleştirildi (2.0 -> 2.0_f32)
                 egui::Stroke::new(2.0_f32, egui::Color32::from_rgb(255, 50, 50)),
             );
             painter.text(
