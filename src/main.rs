@@ -8,7 +8,6 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 struct CheatApp {
-    // Menü State'leri (İleride Go'daki Config ile eşleyeceğimiz yerler)
     menu_open: Arc<AtomicBool>,
     box_esp: bool,
     skeleton_esp: bool,
@@ -44,43 +43,47 @@ impl Default for CheatApp {
 
 impl eframe::App for CheatApp {
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        // Overlay penceremizin arkaplanını tamamen şeffaf yapıyoruz
         [0.0, 0.0, 0.0, 0.0]
     }
 
-    fn update(&self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        // Her frame'de INSERT tuşunu kontrol et (0x2D = VK_INSERT)
+    // DÜZELTME 1: update fonksiyonu &mut self almalı (incompatible type hatası çözüldü)
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         unsafe {
             if GetAsyncKeyState(0x2D) & 1 != 0 {
                 let current = self.menu_open.load(Ordering::Relaxed);
                 self.menu_open.store(!current, Ordering::Relaxed);
 
-                // Menü açıkken fare tıklamalarını al, kapalıyken tıklamayı oyuna geçir (Click-Through)
-                if let Ok(info) = frame.info().native_handle {
-                    if let eframe::NativeHandle::HWND(hwnd_ptr) = info {
-                        let hwnd = HWND(hwnd_ptr as _);
+                // DÜZELTME 2 & 3: viewport window handle çekme yöntemi güncellendi
+                if let Some(viewport_i_d) = ctx.input(|i| i.viewport().focused) {
+                    _ = viewport_i_d;
+                }
+                
+                // Windows HWND entegrasyonu için eframe alt seviye pencere erisimi
+                #cfg!(target_os = "windows");
+                let _hwnd = frame.window_handle().map(|wh| {
+                    if let raw_window_handle::RawWindowHandle::Win32(win32_handle) = wh.as_raw() {
+                        let hwnd = HWND(win32_handle.hwnd.get() as _);
                         let ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
-                        if !current {
-                            // Menü açıldı -> Tıklamaları yakala
-                            SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style & !(WS_EX_TRANSPARENT.0 as isize));
-                        } else {
-                            // Menü kapandı -> Tıklamaları oyuna geçir
-                            SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style | (WS_EX_TRANSPARENT.0 as isize));
+                        unsafe {
+                            if !current {
+                                SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style & !(WS_EX_TRANSPARENT.0 as isize));
+                            } else {
+                                SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style | (WS_EX_TRANSPARENT.0 as isize));
+                            }
                         }
                     }
-                }
+                });
             }
         }
 
-        // ESP Çizim Alanı (Ekranın Tamamı Üzerine Çizim)
         let painter = ctx.layer_painter(egui::LayerId::background());
 
-        // Test için minik bir indikasyon (ESP çizimlerinin yapılacağı yer)
         if self.bomb_timer {
             painter.circle_stroke(
                 egui::pos2(150.0, 150.0),
                 15.0,
-                egui::Stroke::new(2.0, egui::Color32::from_rgb(255, 50, 50)),
+                // DÜZELTME 4: Float literal fallback uyarısını önlemek için türler netleştirildi (2.0 -> 2.0_f32)
+                egui::Stroke::new(2.0_f32, egui::Color32::from_rgb(255, 50, 50)),
             );
             painter.text(
                 egui::pos2(150.0, 125.0),
@@ -91,7 +94,6 @@ impl eframe::App for CheatApp {
             );
         }
 
-        // --- egui Modern Menü ---
         if self.menu_open.load(Ordering::Relaxed) {
             egui::Window::new("=== MESNEVI EXTERNAL (Rust + egui) ===")
                 .default_size([320.0, 420.0])
@@ -147,7 +149,6 @@ impl eframe::App for CheatApp {
                 });
         }
 
-        // Sürekli arayüz güncellemesi (60+ FPS Overlay için)
         ctx.request_repaint();
     }
 }
