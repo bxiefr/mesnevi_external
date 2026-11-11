@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       build_v191:
-        description: 'v1.9.1rust-egui-test branchini build et'
+        description: 'v1.9.1 branchini build et'
         required: true
         type: boolean
         default: true
@@ -23,7 +23,7 @@ jobs:
     steps:
     - name: Clone and Checkout Branch
       run: |
-        git clone --branch v1.9.1 https://github.com/${{ github.repository }}.git .
+        git clone --branch v1.9.1rust-egui-test https://github.com/${{ github.repository }}.git .
       shell: pwsh
 
     - name: Set up Rust Toolchain
