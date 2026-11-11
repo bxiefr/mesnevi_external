@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
 
-mod offsets;
+mod offset; // Düzeltildi
 mod memory;
 use memory::MemoryManager;
 
@@ -22,7 +22,6 @@ struct CheatApp {
     bomb_timer: bool,
     selected_theme: usize,
     
-    // Bellek yöneticisi ve bağlantı kontrolü
     memory: Option<MemoryManager>,
     last_connect_try: Instant,
 }
@@ -51,7 +50,6 @@ impl Default for CheatApp {
 
 impl eframe::App for CheatApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // INSERT tuşu ile menüyü gizle/göster
         unsafe {
             if GetAsyncKeyState(0x2D) & 1 != 0 {
                 let current = self.menu_open.load(Ordering::Relaxed);
@@ -59,16 +57,13 @@ impl eframe::App for CheatApp {
             }
         }
 
-        // Oyun açık değilse her 3 saniyede bir bağlanmayı dene (Auto-reconnect)
         if self.memory.is_none() && self.last_connect_try.elapsed() > Duration::from_secs(3) {
             self.memory = MemoryManager::new("cs2.exe");
             self.last_connect_try = Instant::now();
         }
 
-        // Oyun bağlıysa arka planda verileri okuyabiliriz
         if let Some(ref mem) = self.memory {
             let _local_player_addr = mem.get_local_player();
-            // Buradan sonra entity listesi okuma ve döngüleri kurabiliriz
         }
 
         if self.menu_open.load(Ordering::Relaxed) {
@@ -78,7 +73,6 @@ impl eframe::App for CheatApp {
                 });
                 ui.separator();
 
-                // Canlı Oyun Bağlantı Durumu
                 ui.horizontal(|ui| {
                     ui.label("CS2 Durumu:");
                     if let Some(ref mem) = self.memory {
@@ -124,9 +118,7 @@ impl eframe::App for CheatApp {
                 ui.add_space(15.0);
                 ui.separator();
                 ui.horizontal(|ui| {
-                    if ui.button("💾 Config Kaydet").clicked() {
-                        // Config kaydetme
-                    }
+                    if ui.button("💾 Config Kaydet").clicked() {}
                     if ui.button("❌ Panik Çıkış").clicked() {
                         std::process::exit(0);
                     }
