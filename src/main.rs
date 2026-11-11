@@ -67,7 +67,7 @@ impl eframe::App for CheatApp {
         }
 
         let is_open = self.menu_open.load(Ordering::Relaxed);
-        let transparent = !is_open || !ctx.wants_pointer_input();
+        let transparent = !is_open;
 
         // Akıllı Tıklama Geçişi (Click-Through)
         if cfg!(target_os = "windows") {
