@@ -103,14 +103,15 @@ impl eframe::App for CheatApp {
         if let Some(ref mem) = self.memory {
             let view_matrix = mem.get_view_matrix();
             
-            // Örnek Test Çizimi (Sol üst köşede test kutusu ve can bilgisi)
+            // Örnek Test Çizimi (Sol üst köşede test kutusu)
             if self.box_esp {
                 let test_pos = [0.0, 0.0, 0.0];
                 if let Some(screen_pos) = MemoryManager::world_to_screen(&view_matrix, &test_pos, screen_size.width(), screen_size.height()) {
                     painter.rect_stroke(
                         egui::Rect::from_center_size(egui::pos2(screen_pos[0], screen_pos[1]), egui::vec2(50.0, 100.0)),
                         0.0,
-                        egui::Stroke::new(1.5, egui::Color::from_rgb(0, 255, 0)),
+                        // DÜZELTME: egui::Color yerine Color32 ve 1.5_f32 kullanıldı
+                        egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(0, 255, 0)),
                     );
                 }
             }
@@ -192,7 +193,7 @@ fn main() -> eframe::Result<()> {
         viewport: egui::ViewportBuilder::default()
             .with_decorations(false)
             .with_transparent(true)
-            .with_always_on_top(true)
+            .with_always_on_top() // DÜZELTME: İçindeki argüman kaldırıldı
             .with_maximized(true),
         ..Default::default()
     };
