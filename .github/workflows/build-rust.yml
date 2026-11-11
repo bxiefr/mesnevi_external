@@ -8,9 +8,8 @@ on:
         required: true
         type: boolean
         default: true
-
   push:
-    branches: [ "v1.9.1rust-egui-test", "cli" ]
+    branches: ["v1.9.1", "cli"]
 
 permissions:
   contents: write
@@ -18,63 +17,60 @@ permissions:
 jobs:
   build-rust:
     runs-on: windows-latest
-    if: ${{ inputs.build_v1.9.1rust-egui-test == true || github.event_name == 'push' }}
+    if: ${{ github.event_name == 'push' || inputs.build_v191 }}
 
     steps:
-    - name: Clone and Checkout Branch
-      run: |
-        git clone --branch v1.9.1rust-egui-test https://github.com/${{ github.repository }}.git .
-      shell: pwsh
+      - name: Checkout v1.9.1
+        uses: actions/checkout@v4
+        with:
+          ref: v1.9.1
 
-    - name: Set up Rust Toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        toolchain: stable
-        target: x86_64-pc-windows-msvc
+      - name: Set up Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
 
-    - name: Cache Cargo Dependencies
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Set Environment Info
-      run: |
-        $now = (Get-Date).AddHours(3)
-        echo "DATETIME=$($now.ToString('yyyy-MM-dd HH:mm'))" >> $env:GITHUB_ENV
-        echo "BUILDSTAMP=$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())" >> $env:GITHUB_ENV
-        echo "TAGNAME=1.9.1" >> $env:GITHUB_ENV
-      shell: pwsh
+      - name: Set Environment Info
+        shell: pwsh
+        run: |
+          $now = (Get-Date).AddHours(3)
+          echo "DATETIME=$($now.ToString('yyyy-MM-dd HH:mm'))" >> $env:GITHUB_ENV
+          echo "BUILDSTAMP=$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())" >> $env:GITHUB_ENV
+          echo "TAGNAME=1.9.1" >> $env:GITHUB_ENV
 
-    - name: Build Rust Release Executable
-      run: |
-        cargo build --release
-      shell: pwsh
+      - name: Build Rust Release Executable
+        shell: pwsh
+        run: cargo build --release
 
-    - name: Prepare Release Folder
-      run: |
-        mkdir release_folder
-        copy target\release\mesnevi_external.exe release_folder\mesnevi.exe
-      shell: pwsh
+      - name: Prepare Release Folder
+        shell: pwsh
+        run: |
+          mkdir release_folder
+          copy target\release\mesnevi_external.exe release_folder\mesnevi.exe
 
-    - name: Create GitHub Release
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        $releaseBody = @"
-        ### Rust Egui Build Details (v1.9.1)
-        - **Build Time:** ${{ env.DATETIME }}
-        - **Source Branch:** v1.9.1rust-egui-test
-        - **Engine:** Rust + egui / eframe
-        - BuildStamp: ${{ env.BUILDSTAMP }}
-        "@
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $releaseBody = @(
+            "### Rust Egui Build Details (v1.9.1)",
+            "- **Build Time:** $env:DATETIME",
+            "- **Source Branch:** v1.9.1",
+            "- **Engine:** Rust + egui / eframe",
+            "- BuildStamp: $env:BUILDSTAMP"
+          ) -join "`n"
 
-        gh release delete "${{ env.TAGNAME }}" --yes 2>$null
-        git push origin --delete "${{ env.TAGNAME }}" 2>$null
-        $global:LASTEXITCODE = 0
+          gh release delete "$env:TAGNAME" --yes --cleanup-tag 2>$null
+          $global:LASTEXITCODE = 0
 
-        gh release create "${{ env.TAGNAME }}" --title "Release v${{ env.TAGNAME }} (v1.9.1)" --notes "$releaseBody" release_folder/mesnevi.exe
-      shell: pwsh
+          gh release create "$env:TAGNAME" --target v1.9.1 --title "Release v$env:TAGNAME (v1.9.1)" --notes "$releaseBody" release_folder/mesnevi.exe
