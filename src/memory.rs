@@ -1,9 +1,9 @@
 use windows::Win32::Foundation::HANDLE;
+use windows::Win32::System::Diagnostics::Debug::ReadProcessMemory;
 use windows::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, Module32FirstW, Module32NextW, Process32FirstW, Process32NextW,
     MODULEENTRY32W, PROCESSENTRY32W, TH32CS_SNAPMODULE, TH32CS_SNAPMODULE32, TH32CS_SNAPPROCESS,
 };
-use windows::Win32::System::Memory::ReadProcessMemory;
 use windows::Win32::System::Threading::{OpenProcess, PROCESS_VM_READ};
 
 pub struct MemoryManager {
@@ -88,7 +88,7 @@ impl MemoryManager {
     }
 
     pub fn get_local_player(&self) -> usize {
-        let ptr = self.client_base + crate::offsets::DW_LOCAL_PLAYER_CONTROLLER;
+        let ptr = self.client_base + crate::offset::DW_LOCAL_PLAYER_CONTROLLER;
         self.read_pointer(ptr)
     }
 }
