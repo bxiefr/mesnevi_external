@@ -3,9 +3,10 @@ use raw_window_handle::HasWindowHandle;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use windows::Win32::Foundation::HWND;
-use windows::Win32::Graphics::Gdi::CreateRectRgn;
 use windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
-use windows::Win32::UI::WindowsAndMessaging::SetWindowRgn;
+use windows::Win32::UI::WindowsAndMessaging::{
+    GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_TRANSPARENT,
+};
 
 struct CheatApp {
     menu_open: Arc<AtomicBool>,
@@ -55,11 +56,35 @@ impl eframe::App for CheatApp {
         }
 
         let is_open = self.menu_open.load(Ordering::Relaxed);
+
+        // Akıllı Click-Through: Menü kapalıysa veya açık ama fare menü üzerinde değilse tıklamaları oyuna geçir.
+        let transparent = !is_open || !ctx.wants_pointer_input();
+
+        if cfg!(target_os = "windows") {
+            let _ = frame.window_handle().map(|wh| {
+                if let raw_window_handle::RawWindowHandle::Win32(win32_handle) = wh.as_raw() {
+                    let hwnd = HWND(win32_handle.hwnd.get() as _);
+                    unsafe {
+                        let ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+                        let is_currently_transparent = (ex_style & WS_EX_TRANSPARENT.0 as isize) != 0;
+                        if transparent != is_currently_transparent {
+                            let mut new_style = ex_style;
+                            if transparent {
+                                new_style |= WS_EX_TRANSPARENT.0 as isize;
+                            } else {
+                                new_style &= !(WS_EX_TRANSPARENT.0 as isize);
+                            }
+                            SetWindowLongPtrW(hwnd, GWL_EXSTYLE, new_style);
+                        }
+                    }
+                }
+            });
+        }
+
         let painter = ctx.layer_painter(egui::LayerId::background());
 
-        // Test amaçlı bomb timer çizimi
         if self.bomb_timer {
-            painter.circle_stroke(
+            painter.circle_spec(
                 egui::pos2(150.0, 150.0),
                 15.0,
                 egui::Stroke::new(2.0_f32, egui::Color32::from_rgb(255, 50, 50)),
@@ -73,11 +98,8 @@ impl eframe::App for CheatApp {
             );
         }
 
-        let mut menu_rect_opt = None;
-
-        // Menü açıksa çiz ve kapladığı alanı (rect) yakala
         if is_open {
-            let window_response = egui::Window::new("=== MESNEVI EXTERNAL ===")
+            egui::Window::new("=== MESNEVI EXTERNAL ===")
                 .default_pos([100.0, 100.0])
                 .resizable(false)
                 .show(ctx, |ui| {
@@ -129,35 +151,6 @@ impl eframe::App for CheatApp {
                     ui.add_space(5.0);
                     ui.weak("[INSERT] Menüyü Gizle/Göster");
                 });
-
-            if let Some(inner) = window_response {
-                menu_rect_opt = Some(inner.response.rect);
-            }
-        }
-
-        // Windows API ile tıklanabilir alanı (Window Region) ayarla
-        unsafe {
-            if cfg!(target_os = "windows") {
-                let _ = frame.window_handle().map(|wh| {
-                    if let raw_window_handle::RawWindowHandle::Win32(win32_handle) = wh.as_raw() {
-                        let hwnd = HWND(win32_handle.hwnd.get() as _);
-                        if let Some(rect) = menu_rect_opt {
-                            // Menü açıksa, sadece menü kutusunun olduğu alanı tıklanabilir yap
-                            let h_rgn = CreateRectRgn(
-                                rect.min.x as i32,
-                                rect.min.y as i32,
-                                rect.max.x as i32,
-                                rect.max.y as i32,
-                            );
-                            SetWindowRgn(hwnd, h_rgn, true);
-                        } else {
-                            // Menü kapalıysa (veya görünmüyorsa) tüm ekranı tıklanamaz (click-through) yap
-                            let h_rgn = CreateRectRgn(0, 0, 0, 0);
-                            SetWindowRgn(hwnd, h_rgn, true);
-                        }
-                    }
-                });
-            }
         }
 
         ctx.request_repaint();
