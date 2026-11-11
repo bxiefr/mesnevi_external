@@ -84,7 +84,8 @@ impl eframe::App for CheatApp {
         let painter = ctx.layer_painter(egui::LayerId::background());
 
         if self.bomb_timer {
-            painter.circle_spec(
+            // DÜZELTME: circle_spec yerine doğru fonksiyon olan circle_stroke kullanıldı
+            painter.circle_stroke(
                 egui::pos2(150.0, 150.0),
                 15.0,
                 egui::Stroke::new(2.0_f32, egui::Color32::from_rgb(255, 50, 50)),
