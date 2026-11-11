@@ -87,8 +87,24 @@ impl MemoryManager {
         self.read::<usize>(address)
     }
 
-    pub fn get_local_player(&self) -> usize {
-        let ptr = self.client_base + crate::offset::DW_LOCAL_PLAYER_CONTROLLER;
-        self.read_pointer(ptr)
+    pub fn get_view_matrix(&self) -> [f32; 16] {
+        self.read::<[f32; 16]>(self.client_base + crate::offset::DW_VIEW_MATRIX)
+    }
+
+    // World to Screen (3D -> 2D Dönüşüm Matrisi)
+    pub fn world_to_screen(matrix: &[f32; 16], pos: &[f32; 3], width: f32, height: f32) -> Option<[f32; 2]> {
+        let w = matrix[12] * pos[0] + matrix[13] * pos[1] + matrix[14] * pos[2] + matrix[15];
+        if w < 0.01 {
+            return None;
+        }
+
+        let inv_w = 1.0 / w;
+        let x = matrix[0] * pos[0] + matrix[1] * pos[1] + matrix[2] * pos[2] + matrix[3];
+        let y = matrix[4] * pos[0] + matrix[5] * pos[1] + matrix[6] * pos[2] + matrix[7];
+
+        let screen_x = (width / 2.0) + (0.5 * x * inv_w * width + 0.5);
+        let screen_y = (height / 2.0) - (0.5 * y * inv_w * height + 0.5);
+
+        Some([screen_x, screen_y])
     }
 }
