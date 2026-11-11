@@ -1,8 +1,6 @@
-use std::ffi::OsStr;
-use std::os::windows::ffi::OsStrExt;
 use windows::Win32::Foundation::{HANDLE, HMODULE};
 use windows::Win32::System::Diagnostics::ToolHelp::{
-    CreateToolhelp32Snapshot, Module32FirstW, Process32FirstW, Process32NextW,
+    CreateToolhelp32Snapshot, Module32FirstW, Module32NextW, Process32FirstW, Process32NextW,
     MODULEENTRY32W, PROCESSENTRY32W, TH32CS_SNAPMODULE, TH32CS_SNAPMODULE32, TH32CS_SNAPPROCESS,
 };
 use windows::Win32::System::Memory::ReadProcessMemory;
@@ -15,7 +13,6 @@ pub struct MemoryManager {
 }
 
 impl MemoryManager {
-    // cs2.exe sürecini ve client.dll adresini bulan kurucu fonksiyon
     pub fn new(process_name: &str) -> Option<Self> {
         unsafe {
             let pid = Self::get_process_id(process_name)?;
@@ -64,7 +61,7 @@ impl MemoryManager {
                 if name.eq_ignore_ascii_case(module_name) {
                     return Some(entry.modBaseAddr as usize);
                 }
-                if windows::Win32::System::Diagnostics::ToolHelp::Module32NextW(snapshot, &mut entry).is_err() {
+                if Module32NextW(snapshot, &mut entry).is_err() {
                     break;
                 }
             }
@@ -72,7 +69,6 @@ impl MemoryManager {
         None
     }
 
-    // Belirtilen adresten generic tipte veri okuma fonksiyonu
     pub fn read<T: Copy>(&self, address: usize) -> T {
         let mut buffer: T = unsafe { std::mem::zeroed() };
         unsafe {
@@ -86,15 +82,13 @@ impl MemoryManager {
         }
         buffer
     }
-}
 
-// Pointer zinciri takip ederek adres okuma (Go'daki ReadPointer mantığı)
     pub fn read_pointer(&self, address: usize) -> usize {
         self.read::<usize>(address)
     }
 
-    // Local Player adresini çekme
     pub fn get_local_player(&self) -> usize {
         let ptr = self.client_base + crate::offsets::DW_LOCAL_PLAYER_CONTROLLER;
         self.read_pointer(ptr)
     }
+}
