@@ -1,4 +1,4 @@
-name: Build All Branches (Pure CLI)
+name: Build All Branches
 
 on:
   workflow_dispatch:
@@ -10,6 +10,11 @@ on:
         default: true
       build_v189:
         description: 'v1.8.9neon branchini build et'
+        required: true
+        type: boolean
+        default: true
+      build_v190:
+        description: 'v1.9.0test branchini build et'
         required: true
         type: boolean
         default: true
@@ -33,6 +38,9 @@ jobs:
           - target_branch: "v1.8.9neon"
             version: "1.8.9"
             enable: ${{ inputs.build_v189 == true || github.event_name == 'push' }}
+          - target_branch: "v1.8.9neon"
+            version: "1.9.0"
+            enable: ${{ inputs.build_v190 == true || github.event_name == 'push' }}
 
     steps:
     - name: Check if branch is enabled
