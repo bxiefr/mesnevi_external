@@ -4,6 +4,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
 
+mod offsets;
 mod memory;
 use memory::MemoryManager;
 
@@ -58,10 +59,16 @@ impl eframe::App for CheatApp {
             }
         }
 
-        // Oyun açık değilse her 3 saniyede bir bağlanmayı dene (Auto-reconnect / arayüz donmaz)
+        // Oyun açık değilse her 3 saniyede bir bağlanmayı dene (Auto-reconnect)
         if self.memory.is_none() && self.last_connect_try.elapsed() > Duration::from_secs(3) {
             self.memory = MemoryManager::new("cs2.exe");
             self.last_connect_try = Instant::now();
+        }
+
+        // Oyun bağlıysa arka planda verileri okuyabiliriz
+        if let Some(ref mem) = self.memory {
+            let _local_player_addr = mem.get_local_player();
+            // Buradan sonra entity listesi okuma ve döngüleri kurabiliriz
         }
 
         if self.menu_open.load(Ordering::Relaxed) {
