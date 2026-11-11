@@ -21,6 +21,7 @@ struct CheatApp {
     hitmarker: bool,
     bomb_timer: bool,
     selected_theme: usize,
+    last_menu_state: bool,
 }
 
 impl Default for CheatApp {
@@ -38,6 +39,7 @@ impl Default for CheatApp {
             hitmarker: true,
             bomb_timer: true,
             selected_theme: 0,
+            last_menu_state: true,
         }
     }
 }
@@ -51,19 +53,31 @@ impl eframe::App for CheatApp {
         unsafe {
             if GetAsyncKeyState(0x2D) & 1 != 0 {
                 let current = self.menu_open.load(Ordering::Relaxed);
-                self.menu_open.store(!current, Ordering::Relaxed);
+                let new_state = !current;
+                self.menu_open.store(new_state, Ordering::Relaxed);
+            }
+        }
 
+        let is_open = self.menu_open.load(Ordering::Relaxed);
+
+        // Menü durumu değiştiğinde pencere boyutu ve tıklama (click-through) özelliklerini ayarla
+        if is_open != self.last_menu_state {
+            self.last_menu_state = is_open;
+            unsafe {
                 if cfg!(target_os = "windows") {
                     let _ = frame.window_handle().map(|wh| {
                         if let raw_window_handle::RawWindowHandle::Win32(win32_handle) = wh.as_raw() {
                             let hwnd = HWND(win32_handle.hwnd.get() as _);
                             let ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
-                            unsafe {
-                                if !current {
-                                    SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style & !(WS_EX_TRANSPARENT.0 as isize));
-                                } else {
-                                    SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style | (WS_EX_TRANSPARENT.0 as isize));
-                                }
+                            if is_open {
+                                // Menü Açık: Tıklamaları yakala, boyutu küçült
+                                SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style & !(WS_EX_TRANSPARENT.0 as isize));
+                                ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(360.0, 500.0)));
+                                ctx.send_viewport_cmd(egui::ViewportCommand::Resizable(false));
+                            } else {
+                                // Menü Kapalı: Tıklamaları arkaya (oyuna) geçir, ekranı kapla
+                                SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style | (WS_EX_TRANSPARENT.0 as isize));
+                                ctx.send_viewport_cmd(egui::ViewportCommand::Maximized(true));
                             }
                         }
                     });
@@ -88,59 +102,56 @@ impl eframe::App for CheatApp {
             );
         }
 
-        if self.menu_open.load(Ordering::Relaxed) {
-            egui::Window::new("=== MESNEVI EXTERNAL (Rust + egui) ===")
-                .default_size([320.0, 420.0])
-                .resizable(false)
-                .show(ctx, |ui| {
-                    ui.vertical_centered(|ui| {
-                        ui.heading("ESP & Visual Settings");
-                    });
-                    ui.separator();
-
-                    ui.collapsing("ESP Ayarları", |ui| {
-                        ui.checkbox(&mut self.box_esp, "Box ESP [F1]");
-                        ui.checkbox(&mut self.skeleton_esp, "Skeleton ESP [F2]");
-                        ui.checkbox(&mut self.head_circle, "Head Circle [F3]");
-                        ui.checkbox(&mut self.team_check, "Team Check [F4]");
-                    });
-
-                    ui.collapsing("Görsel & Ek Bilgiler", |ui| {
-                        ui.checkbox(&mut self.health_bar, "Health Bar [F5]");
-                        ui.checkbox(&mut self.armor_bar, "Armor Bar [F9]");
-                        ui.checkbox(&mut self.player_name, "Player Name [F6]");
-                        ui.checkbox(&mut self.distance_display, "Distance Display [F7]");
-                        ui.checkbox(&mut self.hitmarker, "Hitmarker & Sound [F10]");
-                        ui.checkbox(&mut self.bomb_timer, "Bomb Timer [F12]");
-                    });
-
-                    ui.separator();
-                    ui.horizontal(|ui| {
-                        ui.label("ESP Tema Rengi:");
-                        let themes = ["MAVİ", "YEŞİL", "KIRMIZI", "SARI", "MOR", "TURKUAZ"];
-                        egui::ComboBox::from_id_source("theme_combo")
-                            .selected_text(themes[self.selected_theme])
-                            .show_ui(ui, |ui| {
-                                for (idx, theme) in themes.iter().enumerate() {
-                                    ui.selectable_value(&mut self.selected_theme, idx, *theme);
-                                }
-                            });
-                    });
-
-                    ui.add_space(15.0);
-                    ui.separator();
-                    ui.horizontal(|ui| {
-                        if ui.button("💾 Config Kaydet").clicked() {
-                            // Config kaydetme mantığı
-                        }
-                        if ui.button("❌ Panik Çıkış").clicked() {
-                            std::process::exit(0);
-                        }
-                    });
-
-                    ui.add_space(5.0);
-                    ui.weak("[INSERT] Menüyü Gizle/Göster");
+        if is_open {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                ui.vertical_centered(|ui| {
+                    ui.heading("=== MESNEVI EXTERNAL ===");
                 });
+                ui.separator();
+
+                ui.collapsing("ESP Ayarları", |ui| {
+                    ui.checkbox(&mut self.box_esp, "Box ESP [F1]");
+                    ui.checkbox(&mut self.skeleton_esp, "Skeleton ESP [F2]");
+                    ui.checkbox(&mut self.head_circle, "Head Circle [F3]");
+                    ui.checkbox(&mut self.team_check, "Team Check [F4]");
+                });
+
+                ui.collapsing("Görsel & Ek Bilgiler", |ui| {
+                    ui.checkbox(&mut self.health_bar, "Health Bar [F5]");
+                    ui.checkbox(&mut self.armor_bar, "Armor Bar [F9]");
+                    ui.checkbox(&mut self.player_name, "Player Name [F6]");
+                    ui.checkbox(&mut self.distance_display, "Distance Display [F7]");
+                    ui.checkbox(&mut self.hitmarker, "Hitmarker & Sound [F10]");
+                    ui.checkbox(&mut self.bomb_timer, "Bomb Timer [F12]");
+                });
+
+                ui.separator();
+                ui.horizontal(|ui| {
+                    ui.label("ESP Tema Rengi:");
+                    let themes = ["MAVİ", "YEŞİL", "KIRMIZI", "SARI", "MOR", "TURKUAZ"];
+                    egui::ComboBox::from_id_source("theme_combo")
+                        .selected_text(themes[self.selected_theme])
+                        .show_ui(ui, |ui| {
+                            for (idx, theme) in themes.iter().enumerate() {
+                                ui.selectable_value(&mut self.selected_theme, idx, *theme);
+                            }
+                        });
+                });
+
+                ui.add_space(15.0);
+                ui.separator();
+                ui.horizontal(|ui| {
+                    if ui.button("💾 Config Kaydet").clicked() {
+                        // Config kaydetme
+                    }
+                    if ui.button("❌ Panik Çıkış").clicked() {
+                        std::process::exit(0);
+                    }
+                });
+
+                ui.add_space(5.0);
+                ui.weak("[INSERT] Menüyü Gizle/Göster");
+            });
         }
 
         ctx.request_repaint();
