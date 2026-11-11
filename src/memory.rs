@@ -1,4 +1,4 @@
-use windows::Win32::Foundation::{HANDLE, HMODULE};
+use windows::Win32::Foundation::HANDLE;
 use windows::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, Module32FirstW, Module32NextW, Process32FirstW, Process32NextW,
     MODULEENTRY32W, PROCESSENTRY32W, TH32CS_SNAPMODULE, TH32CS_SNAPMODULE32, TH32CS_SNAPPROCESS,
