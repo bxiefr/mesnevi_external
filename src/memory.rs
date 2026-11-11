@@ -87,3 +87,14 @@ impl MemoryManager {
         buffer
     }
 }
+
+// Pointer zinciri takip ederek adres okuma (Go'daki ReadPointer mantığı)
+    pub fn read_pointer(&self, address: usize) -> usize {
+        self.read::<usize>(address)
+    }
+
+    // Local Player adresini çekme
+    pub fn get_local_player(&self) -> usize {
+        let ptr = self.client_base + crate::offsets::DW_LOCAL_PLAYER_CONTROLLER;
+        self.read_pointer(ptr)
+    }
