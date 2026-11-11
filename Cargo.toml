@@ -1,7 +1,7 @@
 [package]
 name = "mesnevi_external"
 version = "1.9.1"
-edition = "2026"
+edition = "2021"
 
 [dependencies]
 eframe = "0.27.2"
