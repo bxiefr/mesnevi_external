@@ -48,7 +48,7 @@ impl eframe::App for CheatApp {
         [0.0, 0.0, 0.0, 0.0]
     }
 
-    fn update(&self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut_self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         // Her frame'de INSERT tuşunu kontrol et (0x2D = VK_INSERT)
         unsafe {
             if GetAsyncKeyState(0x2D) & 1 != 0 {
