@@ -106,9 +106,9 @@ impl eframe::App for CheatApp {
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_decorations(true) // Pencere çerçevesi ve başlığı olsun (rahatça taşıyabil ve kapatabil diye)
-            .with_always_on_top(true) // Oyuncunun / pencerelerin hep üstünde dursun
-            .with_inner_size([380.0, 480.0]), // Sabit menü boyutu
+            .with_decorations(true)
+            .with_always_on_top() // DÜZELTME: İçine true yazılmadan direkt çağrıldı
+            .with_inner_size([380.0, 480.0]),
         ..Default::default()
     };
 
