@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       build_v191:
-        description: 'v1.9.1 branchini build et'
+        description: 'v1.9.1rust-egui-test branchini build et'
         required: true
         type: boolean
         default: true
 
   push:
-    branches: [ "v1.9.1", "cli" ]
+    branches: [ "v1.9.1rust-egui-test", "cli" ]
 
 permissions:
   contents: write
@@ -18,7 +18,7 @@ permissions:
 jobs:
   build-rust:
     runs-on: windows-latest
-    if: ${{ inputs.build_v191 == true || github.event_name == 'push' }}
+    if: ${{ inputs.build_v1.9.1rust-egui-test == true || github.event_name == 'push' }}
 
     steps:
     - name: Clone and Checkout Branch
@@ -67,7 +67,7 @@ jobs:
         $releaseBody = @"
         ### Rust Egui Build Details (v1.9.1)
         - **Build Time:** ${{ env.DATETIME }}
-        - **Source Branch:** v1.9.1
+        - **Source Branch:** v1.9.1rust-egui-test
         - **Engine:** Rust + egui / eframe
         - BuildStamp: ${{ env.BUILDSTAMP }}
         "@
