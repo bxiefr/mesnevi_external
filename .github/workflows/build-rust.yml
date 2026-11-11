@@ -1,0 +1,80 @@
+name: Build Rust Egui Overlay
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_v191:
+        description: 'v1.9.1 branchini build et'
+        required: true
+        type: boolean
+        default: true
+
+  push:
+    branches: [ "v1.9.1", "cli" ]
+
+permissions:
+  contents: write
+
+jobs:
+  build-rust:
+    runs-on: windows-latest
+    if: ${{ inputs.build_v191 == true || github.event_name == 'push' }}
+
+    steps:
+    - name: Clone and Checkout Branch
+      run: |
+        git clone --branch v1.9.1 https://github.com/${{ github.repository }}.git .
+      shell: pwsh
+
+    - name: Set up Rust Toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+        target: x86_64-pc-windows-msvc
+
+    - name: Cache Cargo Dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Set Environment Info
+      run: |
+        $now = (Get-Date).AddHours(3)
+        echo "DATETIME=$($now.ToString('yyyy-MM-dd HH:mm'))" >> $env:GITHUB_ENV
+        echo "BUILDSTAMP=$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())" >> $env:GITHUB_ENV
+        echo "TAGNAME=1.9.1" >> $env:GITHUB_ENV
+      shell: pwsh
+
+    - name: Build Rust Release Executable
+      run: |
+        cargo build --release
+      shell: pwsh
+
+    - name: Prepare Release Folder
+      run: |
+        mkdir release_folder
+        copy target\release\mesnevi_external.exe release_folder\mesnevi.exe
+      shell: pwsh
+
+    - name: Create GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        $releaseBody = @"
+        ### Rust Egui Build Details (v1.9.1)
+        - **Build Time:** ${{ env.DATETIME }}
+        - **Source Branch:** v1.9.1
+        - **Engine:** Rust + egui / eframe
+        - BuildStamp: ${{ env.BUILDSTAMP }}
+        "@
+
+        gh release delete "${{ env.TAGNAME }}" --yes 2>$null
+        git push origin --delete "${{ env.TAGNAME }}" 2>$null
+        $global:LASTEXITCODE = 0
+
+        gh release create "${{ env.TAGNAME }}" --title "Release v${{ env.TAGNAME }} (v1.9.1)" --notes "$releaseBody" release_folder/mesnevi.exe
+      shell: pwsh
