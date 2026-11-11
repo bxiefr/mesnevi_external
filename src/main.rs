@@ -1,7 +1,11 @@
 use eframe::egui;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
+
+mod memory;
+use memory::MemoryManager;
 
 struct CheatApp {
     menu_open: Arc<AtomicBool>,
@@ -16,10 +20,15 @@ struct CheatApp {
     hitmarker: bool,
     bomb_timer: bool,
     selected_theme: usize,
+    
+    // Bellek yöneticisi ve bağlantı kontrolü
+    memory: Option<MemoryManager>,
+    last_connect_try: Instant,
 }
 
 impl Default for CheatApp {
     fn default() -> Self {
+        let memory = MemoryManager::new("cs2.exe");
         Self {
             menu_open: Arc::new(AtomicBool::new(true)),
             box_esp: true,
@@ -33,6 +42,8 @@ impl Default for CheatApp {
             hitmarker: true,
             bomb_timer: true,
             selected_theme: 0,
+            memory,
+            last_connect_try: Instant::now(),
         }
     }
 }
@@ -47,10 +58,30 @@ impl eframe::App for CheatApp {
             }
         }
 
+        // Oyun açık değilse her 3 saniyede bir bağlanmayı dene (Auto-reconnect / arayüz donmaz)
+        if self.memory.is_none() && self.last_connect_try.elapsed() > Duration::from_secs(3) {
+            self.memory = MemoryManager::new("cs2.exe");
+            self.last_connect_try = Instant::now();
+        }
+
         if self.menu_open.load(Ordering::Relaxed) {
             egui::CentralPanel::default().show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
                     ui.heading("=== MESNEVI EXTERNAL (Rust) ===");
+                });
+                ui.separator();
+
+                // Canlı Oyun Bağlantı Durumu
+                ui.horizontal(|ui| {
+                    ui.label("CS2 Durumu:");
+                    if let Some(ref mem) = self.memory {
+                        ui.colored_label(
+                            egui::Color32::GREEN,
+                            format!("BAĞLANDI (PID: {}, Base: 0x{:X})", mem.pid, mem.client_base),
+                        );
+                    } else {
+                        ui.colored_label(egui::Color32::RED, "ARANIYOR (Oyun bekleniyor...)");
+                    }
                 });
                 ui.separator();
 
@@ -87,7 +118,7 @@ impl eframe::App for CheatApp {
                 ui.separator();
                 ui.horizontal(|ui| {
                     if ui.button("💾 Config Kaydet").clicked() {
-                        // Config kaydetme mantığı
+                        // Config kaydetme
                     }
                     if ui.button("❌ Panik Çıkış").clicked() {
                         std::process::exit(0);
@@ -107,8 +138,8 @@ fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_decorations(true)
-            .with_always_on_top() // DÜZELTME: İçine true yazılmadan direkt çağrıldı
-            .with_inner_size([380.0, 480.0]),
+            .with_always_on_top()
+            .with_inner_size([380.0, 520.0]),
         ..Default::default()
     };
 
