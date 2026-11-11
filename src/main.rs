@@ -1,4 +1,5 @@
 use eframe::egui;
+use raw_window_handle::HasWindowHandle;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use windows::Win32::Foundation::HWND;
@@ -52,7 +53,6 @@ impl eframe::App for CheatApp {
                 let current = self.menu_open.load(Ordering::Relaxed);
                 self.menu_open.store(!current, Ordering::Relaxed);
 
-                // DÜZELTME: #cfg! yazım hatası if cfg!(target_os = "windows") olarak düzeltildi
                 if cfg!(target_os = "windows") {
                     let _ = frame.window_handle().map(|wh| {
                         if let raw_window_handle::RawWindowHandle::Win32(win32_handle) = wh.as_raw() {
