@@ -953,7 +953,8 @@ func drawInGameMenu(hdc win.HDC) {
 
 	setBkMode.Call(uintptr(hdc), 1)
 
-	menuBrush, _, _ := createSolidBrush.Call(uintptr(0x12141a))
+	// Daha modern ve tok bir koyu arkaplan rengi (0x0b0d12)
+	menuBrush, _, _ := createSolidBrush.Call(uintptr(0x0b0d12))
 	r, g, b := hsvToRGB(currentHue, 1.0, 1.0)
 	rgbColorRef := uintptr(r) | (uintptr(g) << 8) | (uintptr(b) << 16)
 	menuBorderPen, _, _ := createPen.Call(win.PS_SOLID, 2, rgbColorRef)
@@ -961,43 +962,62 @@ func drawInGameMenu(hdc win.HDC) {
 	selectObject.Call(uintptr(hdc), menuBrush)
 	selectObject.Call(uintptr(hdc), menuBorderPen)
 
-	rectangleProc.Call(uintptr(hdc), 30, 30, 350, 445)
+	// Menü kutusu boyutları (Genişlik: 30, 370 | Yükseklik: 30, 520)
+	rectangleProc.Call(uintptr(hdc), 30, 30, 370, 520)
 
 	deleteObject.Call(menuBrush)
 	deleteObject.Call(menuBorderPen)
 
+	// Başlık
 	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 255, 255)))
-	title := fmt.Sprintf("--- MESNEVI EXTERNAL v%s ---", currentVersion)
+	title := fmt.Sprintf("=== MESNEVI EXTERNAL v%s ===", currentVersion)
 	titleUTF16, _ := windows.UTF16FromString(title)
 	textOutProc.Call(uintptr(hdc), 50, 45, uintptr(unsafe.Pointer(&titleUTF16[0])), uintptr(len(titleUTF16)-1))
 
 	currentColor := colorNames[skeletonColorIndex]
 
+	// Kategorize edilmiş menü öğeleri (label, status, active, isHeader)
 	items := []struct {
-		label  string
-		status string
-		active bool
+		label    string
+		status   string
+		active   bool
+		isHeader bool
 	}{
-		{"[F1] Box ESP", getStatusText(boxRendering), boxRendering},
-		{"[F2] Skeleton ESP", getStatusText(skeletonRendering), skeletonRendering},
-		{"[F3] Head Circle", getStatusText(headCircle), headCircle},
-		{"[F4] Team Check", getStatusText(teamCheck), teamCheck},
-		{"[F5] Health Bar", getStatusText(healthBarRendering), healthBarRendering},
-		{"[F6] Player Name", getStatusText(nameRendering), nameRendering},
-		{"[F7] Distance Display", getStatusText(distanceRendering), distanceRendering},
-		{"[F8] ESP Tema Rengi", "[" + currentColor + "]", true},
-		{"[F9] Armor Bar", getStatusText(armorBarRendering), armorBarRendering},
-		{"[F10] Hitmarker & Sound", getStatusText(hitmarkerRendering), hitmarkerRendering},
-		{"[F12] Bomb Timer & Arrow", getStatusText(bombTimerRendering), bombTimerRendering},
-		{"[F11] Config Kaydet", "[ KAYDET ]", true},
-		{"[DELETE] Panic Button", "[ ACİL ÇIKIŞ ]", true},
+		{"--- ESP AYARLARI ---", "", false, true},
+		{"[F1] Box ESP", getStatusText(boxRendering), boxRendering, false},
+		{"[F2] Skeleton ESP", getStatusText(skeletonRendering), skeletonRendering, false},
+		{"[F3] Head Circle", getStatusText(headCircle), headCircle, false},
+		{"[F4] Team Check", getStatusText(teamCheck), teamCheck, false},
+		
+		{"--- GÖRSEL & BİLGİ ---", "", false, true},
+		{"[F5] Health Bar", getStatusText(healthBarRendering), healthBarRendering, false},
+		{"[F9] Armor Bar", getStatusText(armorBarRendering), armorBarRendering, false},
+		{"[F6] Player Name", getStatusText(nameRendering), nameRendering, false},
+		{"[F7] Distance Display", getStatusText(distanceRendering), distanceRendering, false},
+		{"[F10] Hitmarker & Sound", getStatusText(hitmarkerRendering), hitmarkerRendering, false},
+		{"[F12] Bomb Timer", getStatusText(bombTimerRendering), bombTimerRendering, false},
+		{"[F8] ESP Tema Rengi", "[" + currentColor + "]", true, false},
+
+		{"--- SİSTEM & KONTROL ---", "", false, true},
+		{"[F11] Config Kaydet", "[ KAYDET ]", true, false},
+		{"[DELETE] Panic Button", "[ ÇIKIŞ ]", true, false},
 	}
 
 	startY := int32(75)
 	for _, item := range items {
-		setTextColor.Call(uintptr(hdc), uintptr(win.RGB(200, 200, 200)))
+		if item.isHeader {
+			// Kategori başlıkları için şık turuncu/gri ton
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(140, 150, 170)))
+			headerPtr, _ := windows.UTF16PtrFromString(item.label)
+			textOutProc.Call(uintptr(hdc), 45, uintptr(startY), uintptr(unsafe.Pointer(headerPtr)), uintptr(len(item.label)))
+			startY += 22
+			continue
+		}
+
+		// Özellik adı
+		setTextColor.Call(uintptr(hdc), uintptr(win.RGB(210, 215, 225)))
 		labelPtr, _ := windows.UTF16PtrFromString(item.label)
-		textOutProc.Call(uintptr(hdc), 45, uintptr(startY), uintptr(unsafe.Pointer(labelPtr)), uintptr(len(item.label)))
+		textOutProc.Call(uintptr(hdc), 55, uintptr(startY), uintptr(unsafe.Pointer(labelPtr)), uintptr(len(item.label)))
 
 		isColorStatus := false
 		for _, cName := range colorNames {
@@ -1007,25 +1027,30 @@ func drawInGameMenu(hdc win.HDC) {
 			}
 		}
 
+		// Durum renkleri
 		if item.label == "[F11] Config Kaydet" {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 200, 255)))
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 200, 255))) // Mavi
+		} else if item.label == "[DELETE] Panic Button" {
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 70, 70))) // Kırmızı
 		} else if item.active && (item.status == "[ AÇIK ]" || isColorStatus) {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 255, 100)))
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 255, 120))) // Neon Yeşil
 		} else if item.status == "[ KAPALI ]" {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 60, 60)))
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(240, 60, 60))) // Soft Kırmızı
 		} else {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 200, 0)))
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 200, 0))) // Sarı
 		}
 
+		// Sağ tarafa hizalanmış statü yazısı
 		statusPtr, _ := windows.UTF16PtrFromString(item.status)
-		textOutProc.Call(uintptr(hdc), 230, uintptr(startY), uintptr(unsafe.Pointer(statusPtr)), uintptr(len(item.status)))
+		textOutProc.Call(uintptr(hdc), 250, uintptr(startY), uintptr(unsafe.Pointer(statusPtr)), uintptr(len(item.status)))
 
-		startY += 26
+		startY += 23
 	}
 
-	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(150, 150, 150)))
-	footerStr, _ := windows.UTF16PtrFromString("[INSERT] Menuyu Gizle/Goster")
-	textOutProc.Call(uintptr(hdc), 50, uintptr(startY+10), uintptr(unsafe.Pointer(footerStr)), uintptr(len("[INSERT] Menuyu Gizle/Goster")))
+	// Alt bilgi footer
+	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(110, 120, 140)))
+	footerStr, _ := windows.UTF16PtrFromString("[INSERT] Menuyu Gizle / Goster")
+	textOutProc.Call(uintptr(hdc), 50, uintptr(startY+5), uintptr(unsafe.Pointer(footerStr)), uintptr(len("[INSERT] Menuyu Gizle / Goster")))
 }
 
 func getStatusText(status bool) string {
