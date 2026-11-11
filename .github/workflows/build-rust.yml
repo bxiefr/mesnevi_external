@@ -9,7 +9,7 @@ on:
         type: boolean
         default: true
   push:
-    branches: ["v1.9.1", "cli"]
+    branches: ["v1.9.1-rust-egui-test", "cli"]
 
 permissions:
   contents: write
@@ -23,7 +23,7 @@ jobs:
       - name: Checkout v1.9.1
         uses: actions/checkout@v4
         with:
-          ref: v1.9.1
+          ref: v1.9.1-rust-egui-test
 
       - name: Set up Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
