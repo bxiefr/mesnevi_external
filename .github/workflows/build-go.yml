@@ -3,18 +3,8 @@ name: Build All Branches
 on:
   workflow_dispatch:
     inputs:
-      build_v188:
-        description: 'v1.8.8main branchini build et'
-        required: true
-        type: boolean
-        default: true
       build_v189:
-        description: 'v1.8.9neon branchini build et'
-        required: true
-        type: boolean
-        default: true
-      build_v190:
-        description: 'v1.9.0test branchini build et'
+        description: 'v1.8.9 branchini build et'
         required: true
         type: boolean
         default: true
@@ -32,15 +22,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target_branch: "v1.8.8main"
-            version: "1.8.8"
-            enable: ${{ inputs.build_v188 == true || github.event_name == 'push' }}
-          - target_branch: "v1.8.9neon"
+          - target_branch: "v1.8.9"
             version: "1.8.9"
             enable: ${{ inputs.build_v189 == true || github.event_name == 'push' }}
-          - target_branch: "v1.9.0test"
-            version: "1.9.0"
-            enable: ${{ inputs.build_v190 == true || github.event_name == 'push' }}
 
     steps:
     - name: Check if branch is enabled
