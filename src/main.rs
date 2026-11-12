@@ -34,6 +34,11 @@ struct CheatApp {
 impl Default for CheatApp {
     fn default() -> Self {
         let memory = MemoryManager::new("cs2.exe");
+        if let Some(ref mem) = memory {
+            println!("[+] CS2 Başarıyla Bağlandı! PID: {}, Base: 0x{:X}", mem.pid, mem.client_base);
+        } else {
+            println!("[-] CS2 Bulunamadı, oyun bekleniyor...");
+        }
         Self {
             menu_open: Arc::new(AtomicBool::new(true)),
             box_esp: true,
@@ -94,10 +99,13 @@ impl eframe::App for CheatApp {
 
         if self.memory.is_none() && self.last_connect_try.elapsed() > Duration::from_secs(3) {
             self.memory = MemoryManager::new("cs2.exe");
+            if let Some(ref mem) = self.memory {
+                println!("[+] CS2 Yeniden Bağlandı! PID: {}, Base: 0x{:X}", mem.pid, mem.client_base);
+            }
             self.last_connect_try = Instant::now();
         }
 
-        // --- ESP ÇİZİM DÖNGÜSÜ ---
+        // --- ESP ÇİZİM VE DEBUG DÖNGÜSÜ ---
         let painter = ctx.layer_painter(egui::LayerId::background());
         let screen_size = ctx.screen_rect();
 
@@ -119,6 +127,9 @@ impl eframe::App for CheatApp {
 
                             let player_health: i32 = mem.read(controller_base + offset::M_I_HEALTH);
                             if player_health <= 0 || player_health > 100 { continue; }
+
+                            // DEBUG: Oyuncu yakalandığında terminale yazdıracak
+                            println!("[ESP] Oyuncu Bulundu! Index: {}, Sağlık: {}", i, player_health);
 
                             let player_team: i32 = mem.read(controller_base + offset::M_I_TEAM_NUM);
                             if self.team_check && player_team == local_team { continue; }
