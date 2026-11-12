@@ -177,12 +177,12 @@ impl eframe::App for CheatApp {
 
         // --- MENÜ ARAYÜZÜ ---
         if is_open {
-            egui::Window::new("=== MESNEVI EXTERNAL (Rust) ===")
+            egui::Window::new("=== MESNEVI EXTERNAL ===")
                 .default_pos([100.0, 100.0])
                 .resizable(false)
                 .show(ctx, |ui| {
                     ui.vertical_centered(|ui| {
-                        ui.heading("=== MESNEVI EXTERNAL (Rust) ===");
+                        ui.heading("=== MESNEVI EXTERNAL ===");
                     });
                     ui.separator();
 
