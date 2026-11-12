@@ -132,7 +132,8 @@ impl eframe::App for CheatApp {
                         let list_entry2 = mem.read_pointer(entity_list + 0x10);
                         if list_entry2 == 0 { continue; }
 
-                        let sdl2 = mem.read_pointer(list_entry2 + 8 * ((pawn_handle & 0x7FFF) >> 9) + 16);
+                        // DÜZELTME: pawn_handle as usize yapılarak tip uyuşmazlığı giderildi
+                        let sdl2 = mem.read_pointer(list_entry2 + 8 * (((pawn_handle as usize) & 0x7FFF) >> 9) + 16);
                         if sdl2 == 0 { continue; }
 
                         let player_pawn = mem.read_pointer(sdl2 + 120 * (pawn_handle as usize & 0x1FF));
