@@ -111,72 +111,69 @@ impl eframe::App for CheatApp {
 
         if let Some(ref mem) = self.memory {
             let view_matrix = mem.get_view_matrix();
-            let local_controller = mem.read_pointer(mem.client_base + offset::DW_LOCAL_PLAYER_CONTROLLER);
-            
-            if local_controller != 0 {
-                let local_pawn: usize = mem.read_pointer(local_controller + offset::M_H_PLAYER_PAWN as usize); // veya ilgili pawn offseti
-                let local_team: i32 = mem.read(local_controller + offset::M_I_TEAM_NUM);
-                let entity_list = mem.read_pointer(mem.client_base + offset::DW_ENTITY_LIST);
+            let local_pawn = mem.read_pointer(mem.client_base + offset::DW_LOCAL_PLAYER_PAWN);
+            let entity_list = mem.read_pointer(mem.client_base + offset::DW_ENTITY_LIST);
 
-                if entity_list != 0 {
-                    let list_entry = mem.read_pointer(entity_list + 0x10);
-                    if list_entry != 0 {
-                        for i in 1..64 {
-                            let controller_base = mem.read_pointer(list_entry + i * 0x78);
-                            if controller_base == 0 || controller_base == local_controller { continue; }
+            if entity_list != 0 {
+                let list_entry = mem.read_pointer(entity_list + 0x10);
+                if list_entry != 0 {
+                    let local_team: i32 = if local_pawn != 0 { mem.read(local_pawn + offset::M_I_TEAM_NUM) } else { 0 };
 
-                            let pawn_handle: u32 = mem.read(controller_base + offset::M_H_PLAYER_PAWN);
-                            if pawn_handle == 0 { continue; }
+                    for i in 1..64 {
+                        let controller_base = mem.read_pointer(list_entry + i * 0x78);
+                        if controller_base == 0 { continue; }
 
-                            let list_entry2 = mem.read_pointer(entity_list + 0x8 * ((pawn_handle as usize & 0x7FFF) >> 9) + 16);
-                            if list_entry2 == 0 { continue; }
+                        let pawn_handle: u32 = mem.read(controller_base + offset::M_H_PLAYER_PAWN);
+                        if pawn_handle == 0 { continue; }
 
-                            let player_pawn = mem.read_pointer(list_entry2 + 0x78 * (pawn_handle as usize & 0x1FF));
-                            if player_pawn == 0 || player_pawn == local_pawn { continue; }
+                        let list_entry2 = mem.read_pointer(entity_list + 0x8 * ((pawn_handle as usize & 0x7FFF) >> 9) + 16);
+                        if list_entry2 == 0 { continue; }
 
-                            let player_health: i32 = mem.read(player_pawn + offset::M_I_HEALTH);
-                            if player_health <= 0 || player_health > 100 { continue; }
+                        let player_pawn = mem.read_pointer(list_entry2 + 0x78 * (pawn_handle as usize & 0x1FF));
+                        if player_pawn == 0 || player_pawn == local_pawn { continue; }
 
-                            let player_team: i32 = mem.read(player_pawn + offset::M_I_TEAM_NUM);
-                            if self.team_check && player_team == local_team { continue; }
+                        let player_health: i32 = mem.read(player_pawn + offset::M_I_HEALTH);
+                        if player_health <= 0 || player_health > 100 { continue; }
 
-                            // DEBUG: Oyuncunun yakalandığını terminalde görelim
-                            println!("[ESP] Oyuncu Yakalandı -> Sağlık: {}, Takım: {}", player_health, player_team);
+                        let player_team: i32 = mem.read(player_pawn + offset::M_I_TEAM_NUM);
+                        if self.team_check && player_team == local_team { continue; }
 
-                            let scene_node = mem.read_pointer(player_pawn + offset::M_P_GAME_SCENE_NODE);
-                            if scene_node == 0 { continue; }
+                        // TERMINAL DEBUG: Oyuncu yakalandı mıanında görelim
+                        println!("[+] OYUNCU YAKALANDI -> Index: {}, Sağlık: {}, Takım: {}", i, player_health, player_team);
 
-                            let pos: [f32; 3] = mem.read(scene_node + offset::M_V_ABS_ORIGIN);
-                            let mut head_pos = pos;
-                            head_pos[2] += 75.0;
+                        let scene_node = mem.read_pointer(player_pawn + offset::M_P_GAME_SCENE_NODE);
+                        if scene_node == 0 { continue; }
 
-                            if let (Some(feet), Some(head)) = (
-                                MemoryManager::world_to_screen(&view_matrix, &pos, screen_size.width(), screen_size.height()),
-                                MemoryManager::world_to_screen(&view_matrix, &head_pos, screen_size.width(), screen_size.height()),
-                            ) {
-                                let height = (feet[1] - head[1]).abs();
-                                let width = height / 2.0;
-                                let rect = egui::Rect::from_min_max(
-                                    egui::pos2(head[0] - width / 2.0, head[1]),
-                                    egui::pos2(feet[0] + width / 2.0, feet[1]),
+                        let pos: [f32; 3] = mem.read(scene_node + offset::M_V_ABS_ORIGIN);
+                        let mut head_pos = pos;
+                        head_pos[2] += 75.0;
+
+                        if let (Some(feet), Some(head)) = (
+                            MemoryManager::world_to_screen(&view_matrix, &pos, screen_size.width(), screen_size.height()),
+                            MemoryManager::world_to_screen(&view_matrix, &head_pos, screen_size.width(), screen_size.height()),
+                        ) {
+                            let height = (feet[1] - head[1]).abs();
+                            let width = height / 2.0;
+                            let rect = egui::Rect::from_min_max(
+                                egui::pos2(head[0] - width / 2.0, head[1]),
+                                egui::pos2(feet[0] + width / 2.0, feet[1]),
+                            );
+
+                            if self.box_esp {
+                                painter.rect_stroke(
+                                    rect,
+                                    0.0,
+                                    egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(255, 0, 0)),
                                 );
+                            }
 
-                                if self.box_esp {
-                                    painter.rect_stroke(
-                                        rect,
-                                        0.0,
-                                        egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(255, 0, 0)),
-                                    );
-                                }
-
-                                if self.health_bar {
-                                    let bar_height = height * (player_health as f32 / 100.0);
-                                    let bar_rect = egui::Rect::from_min_max(
-                                        egui::pos2(rect.min.x - 6.0, rect.max.y - bar_height),
-                                        egui::pos2(rect.min.x - 3.0, rect.max.y),
-                                    );
-                                    painter.rect_filled(bar_rect, 0.0, egui::Color32::GREEN);
-                                }
+                            if self.health_bar {
+                                let bar_height = height * (player_health as f32 / 100.0);
+                                let bar_rect = egui::Rect::from_min_max(
+                                    egui::pos2(rect.min.x - 6.0, rect.max.y - bar_height),
+                                    egui::pos2(rect.min.x - 3.0, rect.max.y),
+                                );
+                                painter.rect_filled(bar_rect, 0.0, egui::Color32::GREEN);
                             }
                         }
                     }
