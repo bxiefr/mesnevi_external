@@ -1,12 +1,12 @@
-pub const DW_LOCAL_PLAYER_CONTROLLER: usize = 19022536; // Doğrudan güncel decimal offset (veya hex karşılığı)
-pub const DW_ENTITY_LIST: usize = 24874912;
-pub const DW_VIEW_MATRIX: usize = 24908992;
+pub const DW_LOCAL_PLAYER_PAWN: usize = 39140664; // dwLocalPlayerPawn
+pub const DW_ENTITY_LIST: usize = 40931344;       // dwEntityList
+pub const DW_VIEW_MATRIX: usize = 39163456;       // dwViewMatrix
 
-pub const M_I_TEAM_NUM: usize = 999;
-pub const M_I_HEALTH: usize = 844;
-pub const M_H_PLAYER_PAWN: usize = 2348;
-pub const M_P_GAME_SCENE_NODE: usize = 816;
-pub const M_V_ABS_ORIGIN: usize = 5284;
+pub const M_I_TEAM_NUM: usize = 999;       // m_iTeamNum
+pub const M_I_HEALTH: usize = 844;         // m_iHealth
+pub const M_H_PLAYER_PAWN: usize = 2348;   // m_hPlayerPawn
+pub const M_P_GAME_SCENE_NODE: usize = 816;// m_pGameSceneNode
+pub const M_V_ABS_ORIGIN: usize = 5284;    // m_vOldOrigin
 
 #[allow(dead_code)]
 #[derive(Clone, Copy)]
