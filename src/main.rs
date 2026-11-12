@@ -111,6 +111,7 @@ impl eframe::App for CheatApp {
 
                 if entity_list != 0 {
                     let list_entry = mem.read_pointer(entity_list + 0x10);
+                    
                     if list_entry != 0 {
                         for i in 1..64 {
                             let controller_base = mem.read_pointer(list_entry + i * 0x78);
