@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
 use windows::Win32::UI::WindowsAndMessaging::{
-    GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_TRANSPARENT,
+    GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_LAYERED, WS_EX_TRANSPARENT,
 };
 
 mod offset;
@@ -67,23 +67,29 @@ impl eframe::App for CheatApp {
         }
 
         let is_open = self.menu_open.load(Ordering::Relaxed);
+
+        // KESİN ÇÖZÜM: Menü kapalıysa pencere tamamen tıklanmaz (transparent) olur, arkadaki oyun tıklamaları alır.
+        // Menü açıldığında tıklama engeli kalkar ve menüyü rahatça kullanırsın.
         let transparent = !is_open;
 
-        // Akıllı Tıklama Geçişi (Click-Through)
         if cfg!(target_os = "windows") {
             let _ = frame.window_handle().map(|wh| {
                 if let raw_window_handle::RawWindowHandle::Win32(win32_handle) = wh.as_raw() {
                     let hwnd = HWND(win32_handle.hwnd.get() as _);
                     unsafe {
                         let ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
-                        let is_currently_transparent = (ex_style & WS_EX_TRANSPARENT.0 as isize) != 0;
-                        if transparent != is_currently_transparent {
-                            let mut new_style = ex_style;
-                            if transparent {
-                                new_style |= WS_EX_TRANSPARENT.0 as isize;
-                            } else {
-                                new_style &= !(WS_EX_TRANSPARENT.0 as isize);
-                            }
+                        let mut new_style = ex_style;
+
+                        // Layered ve Transparent stillerini duruma göre ayarla
+                        new_style |= WS_EX_LAYERED.0 as isize;
+
+                        if transparent {
+                            new_style |= WS_EX_TRANSPARENT.0 as isize;
+                        } else {
+                            new_style &= !(WS_EX_TRANSPARENT.0 as isize);
+                        }
+
+                        if new_style != ex_style {
                             SetWindowLongPtrW(hwnd, GWL_EXSTYLE, new_style);
                         }
                     }
@@ -103,14 +109,12 @@ impl eframe::App for CheatApp {
         if let Some(ref mem) = self.memory {
             let view_matrix = mem.get_view_matrix();
             
-            // Örnek Test Çizimi (Sol üst köşede test kutusu)
             if self.box_esp {
                 let test_pos = [0.0, 0.0, 0.0];
                 if let Some(screen_pos) = MemoryManager::world_to_screen(&view_matrix, &test_pos, screen_size.width(), screen_size.height()) {
                     painter.rect_stroke(
                         egui::Rect::from_center_size(egui::pos2(screen_pos[0], screen_pos[1]), egui::vec2(50.0, 100.0)),
                         0.0,
-                        // DÜZELTME: egui::Color yerine Color32 ve 1.5_f32 kullanıldı
                         egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(0, 255, 0)),
                     );
                 }
@@ -193,7 +197,7 @@ fn main() -> eframe::Result<()> {
         viewport: egui::ViewportBuilder::default()
             .with_decorations(false)
             .with_transparent(true)
-            .with_always_on_top() // DÜZELTME: İçindeki argüman kaldırıldı
+            .with_always_on_top()
             .with_maximized(true),
         ..Default::default()
     };
