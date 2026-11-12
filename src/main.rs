@@ -55,7 +55,7 @@ impl Default for CheatApp {
 
 impl eframe::App for CheatApp {
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        [0.0, 0.0, 0.0, 0.0] // Şeffaf arka plan
+        [0.0, 0.0, 0.0, 0.0]
     }
 
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
@@ -67,9 +67,6 @@ impl eframe::App for CheatApp {
         }
 
         let is_open = self.menu_open.load(Ordering::Relaxed);
-
-        // KESİN ÇÖZÜM: Menü kapalıysa pencere tamamen tıklanmaz (transparent) olur, arkadaki oyun tıklamaları alır.
-        // Menü açıldığında tıklama engeli kalkar ve menüyü rahatça kullanırsın.
         let transparent = !is_open;
 
         if cfg!(target_os = "windows") {
@@ -79,8 +76,6 @@ impl eframe::App for CheatApp {
                     unsafe {
                         let ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
                         let mut new_style = ex_style;
-
-                        // Layered ve Transparent stillerini duruma göre ayarla
                         new_style |= WS_EX_LAYERED.0 as isize;
 
                         if transparent {
@@ -102,21 +97,80 @@ impl eframe::App for CheatApp {
             self.last_connect_try = Instant::now();
         }
 
-        // --- ESP ÇİZİM MOTORU ---
+        // --- FULL ESP ÇİZİM DÖNGÜSÜ ---
         let painter = ctx.layer_painter(egui::LayerId::background());
         let screen_size = ctx.screen_rect();
 
         if let Some(ref mem) = self.memory {
             let view_matrix = mem.get_view_matrix();
+            let local_controller = mem.get_local_player_controller();
             
-            if self.box_esp {
-                let test_pos = [0.0, 0.0, 0.0];
-                if let Some(screen_pos) = MemoryManager::world_to_screen(&view_matrix, &test_pos, screen_size.width(), screen_size.height()) {
-                    painter.rect_stroke(
-                        egui::Rect::from_center_size(egui::pos2(screen_pos[0], screen_pos[1]), egui::vec2(50.0, 100.0)),
-                        0.0,
-                        egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(0, 255, 0)),
-                    );
+            if local_controller != 0 {
+                let local_team: i32 = mem.read(local_controller + offset::M_I_TEAM_NUM);
+                let entity_list = mem.read_pointer(mem.client_base + offset::DW_ENTITY_LIST);
+
+                if entity_list != 0 {
+                    // Oyuncu döngüsü (64 oyuncuya kadar tarama)
+                    for i in 1..64 {
+                        let list_entry = mem.read_pointer(entity_list + (8 * (i & 0x7FFF) >> 9) + 16);
+                        if list_entry == 0 { continue; }
+
+                        let player_controller = mem.read_pointer(list_entry + 120 * (i & 0x1FF));
+                        if player_controller == 0 || player_controller == local_controller { continue; }
+
+                        let player_health: i32 = mem.read(player_controller + offset::M_I_HEALTH);
+                        if player_health <= 0 || player_health > 100 { continue; }
+
+                        let player_team: i32 = mem.read(player_controller + offset::M_I_TEAM_NUM);
+                        if self.team_check && player_team == local_team { continue; }
+
+                        let pawn_handle: u32 = mem.read(player_controller + offset::M_H_PLAYER_PAWN);
+                        if pawn_handle == 0 { continue; }
+
+                        let list_entry2 = mem.read_pointer(entity_list + (8 * ((pawn_handle as usize & 0x7FFF) >> 9)) + 16);
+                        if list_entry2 == 0 { continue; }
+
+                        let player_pawn = mem.read_pointer(list_entry2 + 120 * (pawn_handle as usize & 0x1FF));
+                        if player_pawn == 0 { continue; }
+
+                        let scene_node = mem.read_pointer(player_pawn + offset::M_P_GAME_SCENE_NODE);
+                        if scene_node == 0 { continue; }
+
+                        let pos: [f32; 3] = mem.read(scene_node + offset::M_V_ABS_ORIGIN);
+                        let mut head_pos = pos;
+                        head_pos[2] += 75.0; // Kafa yüksekliği offseti
+
+                        if let (Some(feet), Some(head)) = (
+                            MemoryManager::world_to_screen(&view_matrix, &pos, screen_size.width(), screen_size.height()),
+                            MemoryManager::world_to_screen(&view_matrix, &head_pos, screen_size.width(), screen_size.height()),
+                        ) {
+                            let height = (feet[1] - head[1]).abs();
+                            let width = height / 2.0;
+                            let rect = egui::Rect::from_min_max(
+                                egui::pos2(head[0] - width / 2.0, head[1]),
+                                egui::pos2(feet[0] + width / 2.0, feet[1]),
+                            );
+
+                            // Box ESP Çizimi
+                            if self.box_esp {
+                                painter.rect_stroke(
+                                    rect,
+                                    0.0,
+                                    egui::Stroke::new(1.5_f32, egui::Color32::from_rgb(255, 0, 0)),
+                                );
+                            }
+
+                            // Health Bar Çizimi
+                            if self.health_bar {
+                                let bar_height = height * (player_health as f32 / 100.0);
+                                let bar_rect = egui::Rect::from_min_max(
+                                    egui::pos2(rect.min.x - 6.0, rect.max.y - bar_height),
+                                    egui::pos2(rect.min.x - 3.0, rect.max.y),
+                                );
+                                painter.rect_filled(bar_rect, 0.0, egui::Color32::GREEN);
+                            }
+                        }
+                    }
                 }
             }
         }
