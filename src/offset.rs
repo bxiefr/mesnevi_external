@@ -1,6 +1,6 @@
-pub const DW_LOCAL_PLAYER_CONTROLLER: usize = 0x2552CD8;
-pub const DW_ENTITY_LIST: usize = 0x2707250;
-pub const DW_VIEW_MATRIX: usize = 0x2554600;
+pub const DW_LOCAL_PLAYER_CONTROLLER: usize = 19022536; // Doğrudan güncel decimal offset (veya hex karşılığı)
+pub const DW_ENTITY_LIST: usize = 24874912;
+pub const DW_VIEW_MATRIX: usize = 24908992;
 
 pub const M_I_TEAM_NUM: usize = 999;
 pub const M_I_HEALTH: usize = 844;
