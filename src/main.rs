@@ -97,7 +97,7 @@ impl eframe::App for CheatApp {
             self.last_connect_try = Instant::now();
         }
 
-        // --- FULL ESP ÇİZİM DÖNGÜSÜ ---
+        // --- ESP ÇİZİM DÖNGÜSÜ ---
         let painter = ctx.layer_painter(egui::LayerId::background());
         let screen_size = ctx.screen_rect();
 
@@ -110,12 +110,14 @@ impl eframe::App for CheatApp {
                 let entity_list = mem.read_pointer(mem.client_base + offset::DW_ENTITY_LIST);
 
                 if entity_list != 0 {
-                    // Oyuncu döngüsü (64 oyuncuya kadar tarama)
                     for i in 1..64 {
-                        let list_entry = mem.read_pointer(entity_list + (8 * (i & 0x7FFF) >> 9) + 16);
+                        let list_entry = mem.read_pointer(entity_list + 0x10);
                         if list_entry == 0 { continue; }
 
-                        let player_controller = mem.read_pointer(list_entry + 120 * (i & 0x1FF));
+                        let sdl = mem.read_pointer(list_entry + 8 * (i >> 9) + 16);
+                        if sdl == 0 { continue; }
+
+                        let player_controller = mem.read_pointer(sdl + 120 * (i & 0x1FF));
                         if player_controller == 0 || player_controller == local_controller { continue; }
 
                         let player_health: i32 = mem.read(player_controller + offset::M_I_HEALTH);
@@ -127,10 +129,13 @@ impl eframe::App for CheatApp {
                         let pawn_handle: u32 = mem.read(player_controller + offset::M_H_PLAYER_PAWN);
                         if pawn_handle == 0 { continue; }
 
-                        let list_entry2 = mem.read_pointer(entity_list + (8 * ((pawn_handle as usize & 0x7FFF) >> 9)) + 16);
+                        let list_entry2 = mem.read_pointer(entity_list + 0x10);
                         if list_entry2 == 0 { continue; }
 
-                        let player_pawn = mem.read_pointer(list_entry2 + 120 * (pawn_handle as usize & 0x1FF));
+                        let sdl2 = mem.read_pointer(list_entry2 + 8 * ((pawn_handle & 0x7FFF) >> 9) + 16);
+                        if sdl2 == 0 { continue; }
+
+                        let player_pawn = mem.read_pointer(sdl2 + 120 * (pawn_handle as usize & 0x1FF));
                         if player_pawn == 0 { continue; }
 
                         let scene_node = mem.read_pointer(player_pawn + offset::M_P_GAME_SCENE_NODE);
@@ -138,7 +143,7 @@ impl eframe::App for CheatApp {
 
                         let pos: [f32; 3] = mem.read(scene_node + offset::M_V_ABS_ORIGIN);
                         let mut head_pos = pos;
-                        head_pos[2] += 75.0; // Kafa yüksekliği offseti
+                        head_pos[2] += 75.0;
 
                         if let (Some(feet), Some(head)) = (
                             MemoryManager::world_to_screen(&view_matrix, &pos, screen_size.width(), screen_size.height()),
@@ -151,7 +156,6 @@ impl eframe::App for CheatApp {
                                 egui::pos2(feet[0] + width / 2.0, feet[1]),
                             );
 
-                            // Box ESP Çizimi
                             if self.box_esp {
                                 painter.rect_stroke(
                                     rect,
@@ -160,7 +164,6 @@ impl eframe::App for CheatApp {
                                 );
                             }
 
-                            // Health Bar Çizimi
                             if self.health_bar {
                                 let bar_height = height * (player_health as f32 / 100.0);
                                 let bar_rect = egui::Rect::from_min_max(
@@ -177,12 +180,13 @@ impl eframe::App for CheatApp {
 
         // --- MENÜ ARAYÜZÜ ---
         if is_open {
-            egui::Window::new("=== MESNEVI EXTERNAL ===")
+            egui::Window::new("MesneviOverlay")
+                .title_bar(false)
                 .default_pos([100.0, 100.0])
                 .resizable(false)
                 .show(ctx, |ui| {
                     ui.vertical_centered(|ui| {
-                        ui.heading("=== MESNEVI EXTERNAL ===");
+                        ui.heading("MESNEVI EXTERNAL");
                     });
                     ui.separator();
 
