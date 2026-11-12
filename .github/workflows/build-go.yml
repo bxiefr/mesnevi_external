@@ -38,7 +38,7 @@ jobs:
           - target_branch: "v1.8.9neon"
             version: "1.8.9"
             enable: ${{ inputs.build_v189 == true || github.event_name == 'push' }}
-          - target_branch: "v1.8.9neon"
+          - target_branch: "v1.9.0test"
             version: "1.9.0"
             enable: ${{ inputs.build_v190 == true || github.event_name == 'push' }}
 
