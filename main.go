@@ -973,6 +973,13 @@ func main() {
 	imgui.CreateContext()
 	defer imgui.DestroyContext()
 
+	io := imgui.CurrentIO()
+	fonts := io.Fonts()
+	fonts.AddFontDefault(nil)
+	fonts.Build()
+
+	themeColors := []imgui.Vec4{
+
 	themeColors := []imgui.Vec4{
 		{X: 1.0, Y: 0.55, Z: 0.47, W: 1.0},
 		{X: 0.49, Y: 1.0, Z: 0.47, W: 1.0},
