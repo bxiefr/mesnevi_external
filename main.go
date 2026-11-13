@@ -973,16 +973,15 @@ func main() {
 	imgui.CreateContext()
 	defer imgui.DestroyContext()
 
-	io := imgui.CurrentIO()
-	fonts := io.Fonts()
-	fonts.AddFontDefault()
-	imgui.ImFontAtlas_Build(fonts)
+    io := imgui.CurrentIO()
+    fonts := io.Fonts()
+    fonts.AddFontDefault()
+    fonts.Build()
 	
-	// Font atlasını manuel olarak build edip TexIsBuilt bayrağını patlamaması için true yapıyoruz
-	var width, height int32
-	var pixels *byte
-	fonts.GetTexDataAsRGBA32(&pixels, &width, &height)
-	fonts.SetTexID(imgui.TextureID(uintptr(1)))
+	// Atlas'ı manuel build edip TexIsBuilt bayrağını true yapıyoruz
+    pixels, width, height, _ := fonts.GetTextureDataAsRGBA32()
+    _, _, _ = pixels, width, height
+    fonts.SetTexID(imgui.TextureID(1))
 
 	themeColors := []imgui.Vec4{
 		{X: 1.0, Y: 0.55, Z: 0.47, W: 1.0},
