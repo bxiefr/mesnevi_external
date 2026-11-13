@@ -185,6 +185,7 @@ func init() {
 
 func checkForUpdates() {
 	if currentVersion == "dev" {
+		fmt.Println("[*] Development surumu aktif. Guncelleme kontrolu atlandi.")
 		return
 	}
 
@@ -193,36 +194,57 @@ func checkForUpdates() {
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(apiURL)
 	if err != nil {
+		fmt.Println("[-] Guncelleme sunucusuna baglanilamadi:", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
+		fmt.Printf("[-] Guncelleme kontrol basarisiz, HTTP: %d\n", resp.StatusCode)
 		return
 	}
 
 	var release GitHubRelease
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		fmt.Println("[-] Release verisi cozumlenemedi:", err)
 		return
 	}
 
 	m := stampRe.FindStringSubmatch(release.Body)
 	if m == nil {
+		fmt.Println("[-] Release aciklamasinda BuildStamp bulunamadi.")
 		return
 	}
 
 	remoteStamp, err1 := strconv.ParseInt(m[1], 10, 64)
 	localStamp, err2 := strconv.ParseInt(buildStamp, 10, 64)
 	if err1 != nil || err2 != nil {
+		fmt.Println("[-] BuildStamp donusum hatasi.")
 		return
 	}
 
+	fmt.Printf("[DEBUG] Remote BuildStamp: %d (%s)\n", remoteStamp, time.Unix(remoteStamp, 0).Format("2006-01-02 15:04:05"))
+	fmt.Printf("[DEBUG] Local  BuildStamp: %d (%s)\n", localStamp, time.Unix(localStamp, 0).Format("2006-01-02 15:04:05"))
+
 	if remoteStamp <= localStamp {
+		fmt.Println("[*] Surum guncel. Baslatiliyor...")
+		return
+	}
+
+	fmt.Printf("\n[!] Yeni build bulundu (%s). Guncellemek ister misin? [Y/N]: ", time.Unix(remoteStamp, 0).Format("2006-01-02 15:04"))
+
+	var choice string
+	_, _ = fmt.Scanln(&choice)
+	choice = strings.TrimSpace(strings.ToUpper(choice))
+
+	if choice != "Y" && choice != "EVET" {
+		fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
 		return
 	}
 
 	for _, asset := range release.Assets {
 		if asset.Name == "mesnevi.exe" {
+			fmt.Println("[*] Guncelleme indiriliyor...")
 			downloadAndUpdate(asset.BrowserDownloadURL)
 			break
 		}
@@ -239,11 +261,13 @@ func downloadAndUpdate(downloadURL string) {
 	client := &http.Client{Timeout: 2 * time.Minute}
 	resp, err := client.Get(downloadURL)
 	if err != nil {
+		fmt.Println("[-] Indirme hatasi:", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
+		fmt.Println("[-] Indirme basarisiz, HTTP:", resp.StatusCode)
 		return
 	}
 
