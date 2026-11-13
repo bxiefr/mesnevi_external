@@ -976,6 +976,7 @@ func main() {
 	io := imgui.CurrentIO()
 	fonts := io.Fonts()
 	fonts.AddFontDefault()
+	imgui.ImFontAtlas_Build(fonts)
 	
 	// Font atlasını manuel olarak build edip TexIsBuilt bayrağını patlamaması için true yapıyoruz
 	var width, height int32
