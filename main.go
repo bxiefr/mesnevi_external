@@ -976,12 +976,12 @@ func main() {
     io := imgui.CurrentIO()
     fonts := io.Fonts()
     fonts.AddFontDefault()
-    fonts.Build()
+    // fonts.Build()
 	
 	// Atlas'ı manuel build edip TexIsBuilt bayrağını true yapıyoruz
-    pixels, width, height, _ := fonts.GetTextureDataAsRGBA32()
-    _, _, _ = pixels, width, height
-    fonts.SetTexID(imgui.TextureID(1))
+    // pixels, width, height, _ := fonts.GetTextureDataAsRGBA32()
+    // _, _, _ = pixels, width, height
+    // fonts.SetTexID(imgui.TextureID(1))
 
 	themeColors := []imgui.Vec4{
 		{X: 1.0, Y: 0.55, Z: 0.47, W: 1.0},
