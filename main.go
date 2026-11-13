@@ -1011,7 +1011,7 @@ func main() {
 
 		imgui.NewFrame()
 
-		drawList := imgui.GetMainViewport().GetDrawList()
+		drawList := imgui.GetBackgroundDrawList()
 
 		if skeletonColorIndex >= len(themeColors) {
 			skeletonColorIndex = 0
