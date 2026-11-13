@@ -87,7 +87,7 @@ jobs:
         CC: gcc
         CXX: g++
       run: |
-        $ldflags = "-s -w -H windowsgui -X main.currentVersion=${{ matrix.version }} -X main.buildStamp=${{ env.BUILDSTAMP }} -extldflags '-static -static-libgcc -static-libstdc++'"
+        $ldflags = "-s -w -X main.currentVersion=${{ matrix.version }} -X main.buildStamp=${{ env.BUILDSTAMP }} -extldflags '-static -static-libgcc -static-libstdc++'"
         go build -ldflags $ldflags -o mesnevi.exe .
       shell: pwsh
 
