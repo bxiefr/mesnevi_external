@@ -13,16 +13,16 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"runtime"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 	"unicode"
 	"unsafe"
 
-	"github.com/lxn/win"
+	"github.com/AllenDang/cimgui-go/imgui"
 	"golang.org/x/sys/windows"
 )
 
@@ -88,71 +88,56 @@ type Entity struct {
 }
 
 type Offset struct {
-	DwViewMatrix           uintptr `json:"dwViewMatrix"`
-	DwLocalPlayerPawn      uintptr `json:"dwLocalPlayerPawn"`
-	DwEntityList           uintptr `json:"dwEntityList"`
-	DwPlantedC4            uintptr `json:"dwPlantedC4"`
-	DwGlobalVars           uintptr `json:"dwGlobalVars"`
-	M_hPlayerPawn          uintptr `json:"m_hPlayerPawn"`
-	M_iHealth              uintptr `json:"m_iHealth"`
-	M_lifeState            uintptr `json:"m_lifeState"`
-	M_iTeamNum             uintptr `json:"m_iTeamNum"`
-	M_vOldOrigin           uintptr `json:"m_vOldOrigin"`
-	M_pGameSceneNode       uintptr `json:"m_pGameSceneNode"`
-	M_modelState           uintptr `json:"m_modelState"`
-	M_boneArray            uintptr `json:"m_boneArray"`
-	M_nodeToWorld          uintptr `json:"m_nodeToWorld"`
-	M_sSanitizedPlayerName uintptr `json:"m_sSanitizedPlayerName"`
-	M_ArmorValue           uintptr `json:"m_ArmorValue"`
-	M_pBulletServices      uintptr `json:"m_pBulletServices"`
-	M_totalHitsOnServer    uintptr `json:"m_totalHitsOnServer"`
-	M_flC4Blow             uintptr `json:"m_flC4Blow"`
+	DwViewMatrix             uintptr `json:"dwViewMatrix"`
+	DwLocalPlayerPawn        uintptr `json:"dwLocalPlayerPawn"`
+	DwEntityList             uintptr `json:"dwEntityList"`
+	DwPlantedC4              uintptr `json:"dwPlantedC4"`
+	DwGlobalVars             uintptr `json:"dwGlobalVars"`
+	M_hPlayerPawn            uintptr `json:"m_hPlayerPawn"`
+	M_iHealth                uintptr `json:"m_iHealth"`
+	M_lifeState              uintptr `json:"m_lifeState"`
+	M_iTeamNum               uintptr `json:"m_iTeamNum"`
+	M_vOldOrigin             uintptr `json:"m_vOldOrigin"`
+	M_pGameSceneNode         uintptr `json:"m_pGameSceneNode"`
+	M_modelState             uintptr `json:"m_modelState"`
+	M_boneArray              uintptr `json:"m_boneArray"`
+	M_nodeToWorld            uintptr `json:"m_nodeToWorld"`
+	M_sSanitizedPlayerName   uintptr `json:"m_sSanitizedPlayerName"`
+	M_ArmorValue             uintptr `json:"m_ArmorValue"`
+	M_pBulletServices        uintptr `json:"m_pBulletServices"`
+	M_totalHitsOnServer      uintptr `json:"m_totalHitsOnServer"`
+	M_flC4Blow               uintptr `json:"m_flC4Blow"`
 }
 
 type Config struct {
-	TeamCheck           bool `json:"teamCheck"`
-	HeadCircle          bool `json:"headCircle"`
-	SkeletonRendering   bool `json:"skeletonRendering"`
-	BoxRendering        bool `json:"boxRendering"`
-	NameRendering       bool `json:"nameRendering"`
-	HealthBarRendering  bool `json:"healthBarRendering"`
-	ArmorBarRendering   bool `json:"armorBarRendering"`
-	HealthTextRendering bool `json:"healthTextRendering"`
-	DistanceRendering   bool `json:"distanceRendering"`
-	HitmarkerRendering  bool `json:"hitmarkerRendering"`
-	HitSoundRendering   bool `json:"hitSoundRendering"`
-	BombTimerRendering  bool `json:"bombTimerRendering"`
-	SkeletonColorIndex  int  `json:"skeletonColorIndex"`
+	TeamCheck             bool `json:"teamCheck"`
+	HeadCircle            bool `json:"headCircle"`
+	SkeletonRendering     bool `json:"skeletonRendering"`
+	BoxRendering          bool `json:"boxRendering"`
+	NameRendering         bool `json:"nameRendering"`
+	HealthBarRendering    bool `json:"healthBarRendering"`
+	ArmorBarRendering     bool `json:"armorBarRendering"`
+	HealthTextRendering   bool `json:"healthTextRendering"`
+	DistanceRendering     bool `json:"distanceRendering"`
+	HitmarkerRendering    bool `json:"hitmarkerRendering"`
+	HitSoundRendering     bool `json:"hitSoundRendering"`
+	BombTimerRendering    bool `json:"bombTimerRendering"`
+	SkeletonColorIndex    int  `json:"skeletonColorIndex"`
 }
 
 var (
-	cachedScreenWidth          float32
-	cachedScreenHeight         float32
-	user32                     = windows.NewLazySystemDLL("user32.dll")
-	getForegroundWindow        = user32.NewProc("GetForegroundWindow")
-	gdi32                      = windows.NewLazySystemDLL("gdi32.dll")
-	kernel32                   = windows.NewLazySystemDLL("kernel32.dll")
-	setPriorityClass           = kernel32.NewProc("SetPriorityClass")
-	winmm                      = windows.NewLazySystemDLL("winmm.dll")
-	getSystemMetrics           = user32.NewProc("GetSystemMetrics")
-	setLayeredWindowAttributes = user32.NewProc("SetLayeredWindowAttributes")
-	setWindowDisplayAffinity   = user32.NewProc("SetWindowDisplayAffinity")
-	showCursor                 = user32.NewProc("ShowCursor")
-	setTextAlign               = gdi32.NewProc("SetTextAlign")
-	createFont                 = gdi32.NewProc("CreateFontW")
-	createCompatibleDC         = gdi32.NewProc("CreateCompatibleDC")
-	createSolidBrush           = gdi32.NewProc("CreateSolidBrush")
-	createPen                  = gdi32.NewProc("CreatePen")
-	selectObject               = gdi32.NewProc("SelectObject")
-	deleteObject               = gdi32.NewProc("DeleteObject")
-	rectangleProc              = gdi32.NewProc("Rectangle")
-	textOutProc                = gdi32.NewProc("TextOutW")
-	setBkMode                  = gdi32.NewProc("SetBkMode")
-	setTextColor               = gdi32.NewProc("SetTextColor")
-	gdiFlush                   = gdi32.NewProc("GdiFlush")
-	GetAsyncKeyState           = user32.NewProc("GetAsyncKeyState")
-	beepProc                   = kernel32.NewProc("Beep")
-	playSoundProc              = winmm.NewProc("PlaySoundW")
+	cachedScreenWidth  float32
+	cachedScreenHeight float32
+	user32             = windows.NewLazySystemDLL("user32.dll")
+	getForegroundWindow  = user32.NewProc("GetForegroundWindow")
+	kernel32           = windows.NewLazySystemDLL("kernel32.dll")
+	setPriorityClass   = kernel32.NewProc("SetPriorityClass")
+	winmm              = windows.NewLazySystemDLL("winmm.dll")
+	getSystemMetrics   = user32.NewProc("GetSystemMetrics")
+	showCursor         = user32.NewProc("ShowCursor")
+	GetAsyncKeyState   = user32.NewProc("GetAsyncKeyState")
+	beepProc           = kernel32.NewProc("Beep")
+	playSoundProc      = winmm.NewProc("PlaySoundW")
 )
 
 const (
@@ -162,40 +147,33 @@ const (
 )
 
 var (
-	teamCheck           bool    = true
-	headCircle          bool    = true
-	skeletonRendering   bool    = true
-	boxRendering        bool    = true
-	nameRendering       bool    = true
-	healthBarRendering  bool    = true
-	armorBarRendering   bool    = true
-	healthTextRendering bool    = true
-	distanceRendering   bool    = true
-	hitmarkerRendering  bool    = true
-	hitSoundRendering   bool    = true
-	bombTimerRendering  bool    = true
-	menuOpen            bool    = true
-	frameDelay          uint32  = 15
-	currentHue          float64 = 0
+	teamCheck             bool    = true
+	headCircle            bool    = true
+	skeletonRendering     bool    = true
+	boxRendering          bool    = true
+	nameRendering         bool    = true
+	healthBarRendering    bool    = true
+	armorBarRendering     bool    = true
+	healthTextRendering   bool    = true
+	distanceRendering     bool    = true
+	hitmarkerRendering    bool    = true
+	hitSoundRendering     bool    = true
+	bombTimerRendering    bool    = true
+	menuOpen              bool    = true
+	frameDelay            uint32  = 15
+	currentHue            float64 = 0
 
-	lastHits            int32 = -1
-	lastHitTime         time.Time
-	cachedHitPath       string
+	lastHits      int32 = -1
+	lastHitTime   time.Time
+	cachedHitPath string
 
-	lastPlantedC4       uintptr
-	bombPlantTime       time.Time
+	lastPlantedC4 uintptr
+	bombPlantTime time.Time
 )
 
 var (
-	bgBrush            uintptr
-	outlinePen         uintptr
-	armorPen           uintptr
-	hitmarkerPen       uintptr
-	skeletonColor      uintptr
 	skeletonColorIndex int
-
-	colorNames = []string{"MAVİ", "YEŞİL", "KIRMIZI", "SARI", "MOR", "TURKUAZ"}
-	themePens  []uintptr
+	colorNames         = []string{"MAVİ", "YEŞİL", "KIRMIZI", "SARI", "MOR", "TURKUAZ"}
 )
 
 func init() {
@@ -240,28 +218,12 @@ func checkForUpdates() {
 		return
 	}
 
-	fmt.Printf("[DEBUG] Remote BuildStamp: %d (%s)\n", remoteStamp, time.Unix(remoteStamp, 0).Format("2006-01-02 15:04:05"))
-	fmt.Printf("[DEBUG] Local  BuildStamp: %d (%s)\n", localStamp, time.Unix(localStamp, 0).Format("2006-01-02 15:04:05"))
-
 	if remoteStamp <= localStamp {
-		fmt.Println("[*] Guncel. Baslatiliyor...")
-		return
-	}
-
-	fmt.Printf("\n[!] Yeni build bulundu (%s). Guncellemek ister misin? [Y/N]: ", time.Unix(remoteStamp, 0).Format("2006-01-02 15:04"))
-
-	var choice string
-	_, _ = fmt.Scanln(&choice)
-	choice = strings.TrimSpace(strings.ToUpper(choice))
-
-	if choice != "Y" && choice != "EVET" {
-		fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
 		return
 	}
 
 	for _, asset := range release.Assets {
 		if asset.Name == "mesnevi.exe" {
-			fmt.Println("[*] Guncelleme indiriliyor...")
 			downloadAndUpdate(asset.BrowserDownloadURL)
 			break
 		}
@@ -278,13 +240,11 @@ func downloadAndUpdate(downloadURL string) {
 	client := &http.Client{Timeout: 2 * time.Minute}
 	resp, err := client.Get(downloadURL)
 	if err != nil {
-		fmt.Println("[-] Indirme hatasi:", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		fmt.Println("[-] Indirme basarisiz, HTTP:", resp.StatusCode)
 		return
 	}
 
@@ -461,7 +421,6 @@ func getOffsets() Offset {
 	var offsets Offset
 	err := json.Unmarshal(embeddedOffsets, &offsets)
 	if err != nil {
-		fmt.Println("Error decoding embedded offsets JSON:", err)
 		return offsets
 	}
 	return offsets
@@ -475,25 +434,25 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		return entities
 	}
 	var (
-		localPlayerP           uintptr
-		localPlayerGameScene   uintptr
+		localPlayerP       uintptr
+		localPlayerGameScene uintptr
 		localPlayerSceneOrigin Vector3
-		localTeam              int32
-		listEntry              uintptr
-		gameScene              uintptr
-		entityController       uintptr
-		entityControllerPawn   uintptr
-		entityPawn             uintptr
-		entityNameAddress      uintptr
-		entityBoneArray        uintptr
-		entityTeam             int32
-		entityHealth           int32
-		entityArmor            int32
-		entityLifeState        int32
-		entityName             string
-		sanitizedNameStr       string
-		entityOrigin           Vector3
-		viewMatrix             Matrix
+		localTeam          int32
+		listEntry          uintptr
+		gameScene          uintptr
+		entityController   uintptr
+		entityControllerPawn uintptr
+		entityPawn         uintptr
+		entityNameAddress  uintptr
+		entityBoneArray    uintptr
+		entityTeam         int32
+		entityHealth       int32
+		entityArmor        int32
+		entityLifeState    int32
+		entityName         string
+		sanitizedNameStr   string
+		entityOrigin       Vector3
+		viewMatrix         Matrix
 	)
 	bones := map[string]int{
 		"head":        6,
@@ -735,7 +694,7 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 	return entities
 }
 
-func drawBombTimer(hdc win.HDC, procHandle windows.Handle, clientDll uintptr, screenWidth, screenHeight uintptr, offsets Offset) {
+func drawBombTimerImGui(drawList imgui.DrawListPtr, procHandle windows.Handle, clientDll uintptr, screenWidth, screenHeight uintptr, offsets Offset) {
 	if !bombTimerRendering {
 		return
 	}
@@ -768,19 +727,13 @@ func drawBombTimer(hdc win.HDC, procHandle windows.Handle, clientDll uintptr, sc
 	}
 
 	ratio := float64(timeLeft) / 40.0
-
-	var rCol, gCol byte
+	var rCol, gCol float32
 	if ratio > 0.5 {
-		rCol = byte(255 * (1.0 - ratio) * 2)
-		gCol = 255
+		rCol = float32(1.0 - ratio) * 2
+		gCol = 1.0
 	} else {
-		rCol = 255
-		gCol = byte(255 * (ratio * 2))
-	}
-
-	gradientPen, _, _ := createPen.Call(win.PS_SOLID, 2, uintptr(rCol)|(uintptr(gCol)<<8))
-	if gradientPen != 0 {
-		defer deleteObject.Call(gradientPen)
+		rCol = 1.0
+		gCol = float32(ratio * 2)
 	}
 
 	var gameScene uintptr
@@ -794,263 +747,149 @@ func drawBombTimer(hdc win.HDC, procHandle windows.Handle, clientDll uintptr, sc
 	read(procHandle, clientDll+offsets.DwViewMatrix, &viewMatrix)
 	bx, by := worldToScreen(viewMatrix, bombOrigin)
 
-	setBkMode.Call(uintptr(hdc), 1)
-
 	if bx > 0 && by > 0 && bx < float32(screenWidth) && by < float32(screenHeight) {
-		win.SelectObject(hdc, win.HGDIOBJ(gradientPen))
-		win.Ellipse(hdc, int32(bx)-15, int32(by)-15, int32(bx)+15, int32(by)+15)
-
+		col := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: rCol, Y: gCol, Z: 0, W: 1})
+		drawList.AddCircle(imgui.Vec2{X: bx, Y: by}, 15, col, 16, 2)
 		timerStr := fmt.Sprintf("%.1fS", timeLeft)
-		textPtr, _ := windows.UTF16PtrFromString(timerStr)
-		win.SetTextColor(hdc, win.RGB(rCol, gCol, 0))
-		setTextAlign.Call(uintptr(hdc), 0x00000006)
-		textOutProc.Call(uintptr(hdc), uintptr(bx), uintptr(by)-28, uintptr(unsafe.Pointer(textPtr)), uintptr(len(timerStr)))
+		drawList.AddText(imgui.Vec2{X: bx - 12, Y: by - 30}, col, timerStr)
 	}
 }
 
-func drawSkeleton(hdc win.HDC, pen uintptr, bones map[string]Vector2) {
-	win.SelectObject(hdc, win.HGDIOBJ(pen))
-	win.MoveToEx(hdc, int(bones["head"].X), int(bones["head"].Y), nil)
-	win.LineTo(hdc, int32(bones["neck_0"].X), int32(bones["neck_0"].Y))
-	win.LineTo(hdc, int32(bones["spine_1"].X), int32(bones["spine_1"].Y))
-	win.LineTo(hdc, int32(bones["spine_2"].X), int32(bones["spine_2"].Y))
-	win.LineTo(hdc, int32(bones["pelvis"].X), int32(bones["pelvis"].Y))
-	win.LineTo(hdc, int32(bones["leg_upper_L"].X), int32(bones["leg_upper_L"].Y))
-	win.LineTo(hdc, int32(bones["leg_lower_L"].X), int32(bones["leg_lower_L"].Y))
-	win.LineTo(hdc, int32(bones["ankle_L"].X), int32(bones["ankle_L"].Y))
-	win.MoveToEx(hdc, int(bones["pelvis"].X), int(bones["pelvis"].Y), nil)
-	win.LineTo(hdc, int32(bones["leg_upper_R"].X), int32(bones["leg_upper_R"].Y))
-	win.LineTo(hdc, int32(bones["leg_lower_R"].X), int32(bones["leg_lower_R"].Y))
-	win.LineTo(hdc, int32(bones["ankle_R"].X), int32(bones["ankle_R"].Y))
-	win.MoveToEx(hdc, int(bones["spine_1"].X), int(bones["spine_1"].Y), nil)
-	win.LineTo(hdc, int32(bones["arm_upper_L"].X), int32(bones["arm_upper_L"].Y))
-	win.LineTo(hdc, int32(bones["arm_lower_L"].X), int32(bones["arm_lower_L"].Y))
-	win.LineTo(hdc, int32(bones["hand_L"].X), int32(bones["hand_L"].Y))
-	win.MoveToEx(hdc, int(bones["spine_1"].X), int(bones["spine_1"].Y), nil)
-	win.LineTo(hdc, int32(bones["arm_upper_R"].X), int32(bones["arm_upper_R"].Y))
-	win.LineTo(hdc, int32(bones["arm_lower_R"].X), int32(bones["arm_lower_R"].Y))
-	win.LineTo(hdc, int32(bones["hand_R"].X), int32(bones["hand_R"].Y))
-}
-
-func drawHitmarker(hdc win.HDC, pen uintptr, screenWidth, screenHeight uintptr) {
-	centerX := int(screenWidth / 2)
-	centerY := int(screenHeight / 2)
-	size := 8
-	gap := 4
-
-	win.SelectObject(hdc, win.HGDIOBJ(pen))
-	win.MoveToEx(hdc, centerX-size, centerY-size, nil)
-	win.LineTo(hdc, int32(centerX-gap), int32(centerY-gap))
-	win.MoveToEx(hdc, centerX+gap, centerY+gap, nil)
-	win.LineTo(hdc, int32(centerX+size), int32(centerY+size))
-	win.MoveToEx(hdc, centerX+size, centerY-size, nil)
-	win.LineTo(hdc, int32(centerX+gap), int32(centerY-gap))
-	win.MoveToEx(hdc, centerX-gap, centerY+gap, nil)
-	win.LineTo(hdc, int32(centerX-size), int32(centerY+size))
-}
-
-func createDynamicHealthPen(hp int32) uintptr {
-	if hp < 0 {
-		hp = 0
-	} else if hp > 100 {
-		hp = 100
+func drawSkeletonImGui(drawList imgui.DrawListPtr, col imgui.Vec4, bones map[string]Vector2) {
+	c := imgui.ColorConvertFloat4ToU32(col)
+	drawLine := func(b1, b2 string) {
+		p1, ok1 := bones[b1]
+		p2, ok2 := bones[b2]
+		if ok1 && ok2 {
+			drawList.AddLine(imgui.Vec2{X: p1.X, Y: p1.Y}, imgui.Vec2{X: p2.X, Y: p2.Y}, c, 1.5)
+		}
 	}
-	r := byte((100 - hp) * 255 / 100)
-	g := byte(hp * 255 / 100)
-	color := uintptr(r) | (uintptr(g) << 8)
-	pen, _, _ := createPen.Call(win.PS_SOLID, 2, color)
-	return pen
+
+	drawLine("head", "neck_0")
+	drawLine("neck_0", "spine_1")
+	drawLine("spine_1", "spine_2")
+	drawLine("spine_2", "pelvis")
+	drawLine("pelvis", "leg_upper_L")
+	drawLine("leg_upper_L", "leg_lower_L")
+	drawLine("leg_lower_L", "ankle_L")
+	drawLine("pelvis", "leg_upper_R")
+	drawLine("leg_upper_R", "leg_lower_R")
+	drawLine("leg_lower_R", "ankle_R")
+	drawLine("spine_1", "arm_upper_L")
+	drawLine("arm_upper_L", "arm_lower_L")
+	drawLine("arm_lower_L", "hand_L")
+	drawLine("spine_1", "arm_upper_R")
+	drawLine("arm_upper_R", "arm_lower_R")
+	drawLine("arm_lower_R", "hand_R")
 }
 
-func renderEntityInfo(hdc win.HDC, tPen uintptr, gPen uintptr, oPen uintptr, hPen uintptr, aPen uintptr, rect Rectangle, hp int32, armor int32, name string, headPos Vector3, distance float32) {
-	setBkMode.Call(uintptr(hdc), 1)
+func drawHitmarkerImGui(drawList imgui.DrawListPtr, screenWidth, screenHeight uintptr) {
+	centerX := float32(screenWidth / 2)
+	centerY := float32(screenHeight / 2)
+	size := float32(8)
+	gap := float32(4)
+	col := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: 1, Y: 1, Z: 1, W: 1})
+
+	drawList.AddLine(imgui.Vec2{X: centerX - size, Y: centerY - size}, imgui.Vec2{X: centerX - gap, Y: centerY - gap}, col, 2)
+	drawList.AddLine(imgui.Vec2{X: centerX + gap, Y: centerY + gap}, imgui.Vec2{X: centerX + size, Y: centerY + size}, col, 2)
+	drawList.AddLine(imgui.Vec2{X: centerX + size, Y: centerY - size}, imgui.Vec2{X: centerX + gap, Y: centerY - gap}, col, 2)
+	drawList.AddLine(imgui.Vec2{X: centerX - gap, Y: centerY + gap}, imgui.Vec2{X: centerX - size, Y: centerY + size}, col, 2)
+}
+
+func renderEntityInfoImGui(drawList imgui.DrawListPtr, themeCol imgui.Vec4, rect Rectangle, hp int32, armor int32, name string, headPos Vector3, distance float32) {
+	black := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: 0, Y: 0, Z: 0, W: 1})
+	tCol := imgui.ColorConvertFloat4ToU32(themeCol)
 
 	if boxRendering {
-		win.SelectObject(hdc, win.HGDIOBJ(tPen))
-		win.MoveToEx(hdc, int(rect.Left), int(rect.Top), nil)
-		win.LineTo(hdc, int32(rect.Right), int32(rect.Top))
-		win.LineTo(hdc, int32(rect.Right), int32(rect.Bottom))
-		win.LineTo(hdc, int32(rect.Left), int32(rect.Bottom))
-		win.LineTo(hdc, int32(rect.Left), int32(rect.Top))
-
-		win.SelectObject(hdc, win.HGDIOBJ(oPen))
-		win.MoveToEx(hdc, int(rect.Left)-1, int(rect.Top)-1, nil)
-		win.LineTo(hdc, int32(rect.Right)-1, int32(rect.Top)+1)
-		win.LineTo(hdc, int32(rect.Right)+1, int32(rect.Bottom)+1)
-		win.LineTo(hdc, int32(rect.Left)+1, int32(rect.Bottom)-1)
-		win.LineTo(hdc, int32(rect.Left)-1, int32(rect.Top)-1)
+		drawList.AddRect(imgui.Vec2{X: rect.Left, Y: rect.Top}, imgui.Vec2{X: rect.Right, Y: rect.Bottom}, tCol, 0, 0, 1.5)
+		drawList.AddRect(imgui.Vec2{X: rect.Left - 1, Y: rect.Top - 1}, imgui.Vec2{X: rect.Right + 1, Y: rect.Bottom + 1}, black, 0, 0, 1)
 	}
 
 	if headCircle {
-		radius := int32((int32(headPos.Z) - int32(headPos.Y)) / 2)
-		win.SelectObject(hdc, win.HGDIOBJ(oPen))
-		win.Ellipse(hdc, int32(headPos.X)-radius-1, int32(headPos.Y)-1, int32(headPos.X)+radius+1, int32(headPos.Z)+1)
-		win.SelectObject(hdc, win.HGDIOBJ(hPen))
-		win.Ellipse(hdc, int32(headPos.X)-radius, int32(headPos.Y), int32(headPos.X)+radius, int32(headPos.Z))
+		radius := (headPos.Z - headPos.Y) / 2
+		drawList.AddCircle(imgui.Vec2{X: headPos.X, Y: headPos.Y + radius}, radius, tCol, 16, 1.5)
 	}
 
 	if healthBarRendering {
-		dynamicHpPen := createDynamicHealthPen(hp)
-		win.SelectObject(hdc, win.HGDIOBJ(dynamicHpPen))
-		win.MoveToEx(hdc, int(rect.Left)-4, int(rect.Bottom)+1-int(float64(int(rect.Bottom)+1-int(rect.Top))*float64(hp)/100.0), nil)
-		win.LineTo(hdc, int32(rect.Left)-4, int32(rect.Bottom)+1)
-		win.DeleteObject(win.HGDIOBJ(dynamicHpPen))
+		if hp < 0 {
+			hp = 0
+		} else if hp > 100 {
+			hp = 100
+		}
+		hpHeight := (rect.Bottom - rect.Top) * (float32(hp) / 100.0)
+		hpTop := rect.Bottom - hpHeight
+		hpCol := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: float32(100-hp) / 100.0, Y: float32(hp) / 100.0, Z: 0, W: 1})
 
-		win.SelectObject(hdc, win.HGDIOBJ(oPen))
-		win.MoveToEx(hdc, int(rect.Left)-5, int(rect.Top)-1, nil)
-		win.LineTo(hdc, int32(rect.Left)-5, int32(rect.Bottom)+1)
-		win.LineTo(hdc, int32(rect.Left)-3, int32(rect.Bottom)+1)
-		win.LineTo(hdc, int32(rect.Left)-3, int32(rect.Top)-1)
-		win.LineTo(hdc, int32(rect.Left)-5, int32(rect.Top)-1)
+		drawList.AddLine(imgui.Vec2{X: rect.Left - 4, Y: hpTop}, imgui.Vec2{X: rect.Left - 4, Y: rect.Bottom}, hpCol, 2)
+		drawList.AddRect(imgui.Vec2{X: rect.Left - 6, Y: rect.Top - 1}, imgui.Vec2{X: rect.Left - 2, Y: rect.Bottom + 1}, black, 0, 0, 1)
 	}
 
 	if armorBarRendering && armor > 0 {
 		if armor > 100 {
 			armor = 100
 		}
-		yPos := int(rect.Bottom) + 1 - int(float64(int(rect.Bottom)+1-int(rect.Top))*float64(armor)/100.0)
-		win.SelectObject(hdc, win.HGDIOBJ(aPen))
-		win.MoveToEx(hdc, int(rect.Right)+4, yPos, nil)
-		win.LineTo(hdc, int32(rect.Right)+4, int32(rect.Bottom)+1)
+		armorHeight := (rect.Bottom - rect.Top) * (float32(armor) / 100.0)
+		armorTop := rect.Bottom - armorHeight
+		armorCol := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: 0, Y: 0.8, Z: 1, W: 1})
 
-		armorText, _ := windows.UTF16PtrFromString(fmt.Sprintf("%d", armor))
-		win.SetTextColor(hdc, win.RGB(byte(0), byte(204), byte(255))) 
-		setTextAlign.Call(uintptr(hdc), 0x00000000) 
-		win.TextOut(hdc, int32(rect.Right)+8, int32(yPos)-4, armorText, int32(len(fmt.Sprintf("%d", armor))))
-	}
-
-	if healthTextRendering {
-		text, _ := windows.UTF16PtrFromString(fmt.Sprintf("%d", hp))
-		win.SetTextColor(hdc, win.RGB(byte(0), byte(255), byte(50)))
-		setTextAlign.Call(uintptr(hdc), 0x00000002) 
-		if healthBarRendering {
-			win.TextOut(hdc, int32(rect.Left)-8, int32(int(rect.Bottom)+1-int(float64(int(rect.Bottom)+1-int(rect.Top))*float64(hp)/100.0)), text, int32(len(fmt.Sprintf("%d", hp))))
-		} else {
-			win.TextOut(hdc, int32(rect.Left)-4, int32(rect.Top), text, int32(len(fmt.Sprintf("%d", hp))))
-		}
+		drawList.AddLine(imgui.Vec2{X: rect.Right + 4, Y: armorTop}, imgui.Vec2{X: rect.Right + 4, Y: rect.Bottom}, armorCol, 2)
 	}
 
 	if nameRendering {
-		text, _ := windows.UTF16PtrFromString(name)
-		win.SetTextColor(hdc, win.RGB(byte(255), byte(255), byte(255)))
-		setTextAlign.Call(uintptr(hdc), 0x00000006)
-		win.TextOut(hdc, int32(rect.Left)+int32((int32(rect.Right)-int32(rect.Left))/2), int32(rect.Top)-14, text, int32(len(name)))
+		white := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: 1, Y: 1, Z: 1, W: 1})
+		drawList.AddText(imgui.Vec2{X: rect.Left + (rect.Right-rect.Left)/2 - float32(len(name)*3), Y: rect.Top - 15}, white, name)
 	}
 
 	if distanceRendering {
 		distStr := fmt.Sprintf("%.0fm", distance)
-		text, _ := windows.UTF16PtrFromString(distStr)
-		win.SetTextColor(hdc, win.RGB(byte(255), byte(255), byte(150)))
-		setTextAlign.Call(uintptr(hdc), 0x00000006)
-		win.TextOut(hdc, int32(rect.Left)+int32((int32(rect.Right)-int32(rect.Left))/2), int32(rect.Bottom)+2, text, int32(len(distStr)))
+		yellow := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: 1, Y: 1, Z: 0.5, W: 1})
+		drawList.AddText(imgui.Vec2{X: rect.Left + (rect.Right-rect.Left)/2 - 10, Y: rect.Bottom + 2}, yellow, distStr)
 	}
 }
 
-func drawInGameMenu(hdc win.HDC) {
+func drawInGameMenu() {
 	if !menuOpen {
 		return
 	}
 
-	setBkMode.Call(uintptr(hdc), 1)
-
-	// Daha modern ve tok bir koyu arkaplan rengi (0x0b0d12)
-	menuBrush, _, _ := createSolidBrush.Call(uintptr(0x0b0d12))
-	r, g, b := hsvToRGB(currentHue, 1.0, 1.0)
-	rgbColorRef := uintptr(r) | (uintptr(g) << 8) | (uintptr(b) << 16)
-	menuBorderPen, _, _ := createPen.Call(win.PS_SOLID, 2, rgbColorRef)
-	
-	selectObject.Call(uintptr(hdc), menuBrush)
-	selectObject.Call(uintptr(hdc), menuBorderPen)
-
-	// Menü kutusu boyutları (Genişlik: 30, 370 | Yükseklik: 30, 520)
-	rectangleProc.Call(uintptr(hdc), 30, 30, 370, 520)
-
-	deleteObject.Call(menuBrush)
-	deleteObject.Call(menuBorderPen)
-
-	// Başlık
-	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 255, 255)))
-	title := fmt.Sprintf("=== MESNEVI EXTERNAL v%s ===", currentVersion)
-	titleUTF16, _ := windows.UTF16FromString(title)
-	textOutProc.Call(uintptr(hdc), 50, 45, uintptr(unsafe.Pointer(&titleUTF16[0])), uintptr(len(titleUTF16)-1))
-
 	currentColor := colorNames[skeletonColorIndex]
+	imgui.SetNextWindowSize(imgui.Vec2{X: 340, Y: 500}, imgui.CondOnce)
+	imgui.Begin("=== MESNEVI EXTERNAL v"+currentVersion+" ===", &menuOpen, imgui.WindowFlagsNoResize)
 
-	// Kategorize edilmiş menü öğeleri
-	items := []struct {
-		label    string
-		status   string
-		active   bool
-		isHeader bool
-	}{
-		{"--- ESP AYARLARI ---", "", false, true},
-		{"[F1] Box ESP", getStatusText(boxRendering), boxRendering, false},
-		{"[F2] Skeleton ESP", getStatusText(skeletonRendering), skeletonRendering, false},
-		{"[F3] Head Circle", getStatusText(headCircle), headCircle, false},
-		{"[F4] Team Check", getStatusText(teamCheck), teamCheck, false},
-		
-		{"--- GÖRSEL & BİLGİ ---", "", false, true},
-		{"[F5] Health Bar", getStatusText(healthBarRendering), healthBarRendering, false},
-		{"[F6] Armor Bar", getStatusText(armorBarRendering), armorBarRendering, false},
-		{"[F7] Player Name", getStatusText(nameRendering), nameRendering, false},
-		{"[F8] Distance Display", getStatusText(distanceRendering), distanceRendering, false},
-		{"[F9] ESP Tema Rengi", "[" + currentColor + "]", true, false},
-		{"[F10] Hitmarker & Sound", getStatusText(hitmarkerRendering), hitmarkerRendering, false},
-		{"[F11] Bomb Timer", getStatusText(bombTimerRendering), bombTimerRendering, false},
+	imgui.TextColored(imgui.Vec4{X: 0.5, Y: 0.6, Z: 0.7, W: 1}, "--- ESP AYARLARI ---")
+	imgui.Checkbox("[F1] Box ESP", &boxRendering)
+	imgui.Checkbox("[F2] Skeleton ESP", &skeletonRendering)
+	imgui.Checkbox("[F3] Head Circle", &headCircle)
+	imgui.Checkbox("[F4] Team Check", &teamCheck)
 
-		{"--- SİSTEM & KONTROL ---", "", false, true},
-		{"[F12] Config Kaydet", "[ KAYDET ]", true, false},
-		{"[DELETE] Panic Button", "[ ÇIKIŞ ]", true, false},
+	imgui.Spacing()
+	imgui.TextColored(imgui.Vec4{X: 0.5, Y: 0.6, Z: 0.7, W: 1}, "--- GORSEL & BILGI ---")
+	imgui.Checkbox("[F5] Health Bar", &healthBarRendering)
+	imgui.Checkbox("[F6] Armor Bar", &armorBarRendering)
+	imgui.Checkbox("[F7] Player Name", &nameRendering)
+	imgui.Checkbox("[F8] Distance Display", &distanceRendering)
+	
+	if imgui.Button("[F9] Tema: " + currentColor) {
+		skeletonColorIndex = (skeletonColorIndex + 1) % len(colorNames)
+		playBeep(true)
 	}
 
-	startY := int32(75)
-	for _, item := range items {
-		if item.isHeader {
-			// Kategori başlıkları için şık turuncu/gri ton
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(140, 150, 170)))
-			headerPtr, _ := windows.UTF16PtrFromString(item.label)
-			textOutProc.Call(uintptr(hdc), 45, uintptr(startY), uintptr(unsafe.Pointer(headerPtr)), uintptr(len(item.label)))
-			startY += 22
-			continue
-		}
+	imgui.Checkbox("[F10] Hitmarker & Sound", &hitmarkerRendering)
+	hitSoundRendering = hitmarkerRendering
+	imgui.Checkbox("[F11] Bomb Timer", &bombTimerRendering)
 
-		// Özellik adı
-		setTextColor.Call(uintptr(hdc), uintptr(win.RGB(210, 215, 225)))
-		labelPtr, _ := windows.UTF16PtrFromString(item.label)
-		textOutProc.Call(uintptr(hdc), 55, uintptr(startY), uintptr(unsafe.Pointer(labelPtr)), uintptr(len(item.label)))
-
-		isColorStatus := false
-		for _, cName := range colorNames {
-			if item.status == "["+cName+"]" {
-				isColorStatus = true
-				break
-			}
-		}
-
-		// Durum renkleri
-		if item.label == "[F11] Config Kaydet" {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 200, 255))) // Mavi
-		} else if item.label == "[DELETE] Panic Button" {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 70, 70))) // Kırmızı
-		} else if item.active && (item.status == "[ AÇIK ]" || isColorStatus) {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 255, 120))) // Neon Yeşil
-		} else if item.status == "[ KAPALI ]" {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(240, 60, 60))) // Soft Kırmızı
-		} else {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 200, 0))) // Sarı
-		}
-
-		// Sağ tarafa hizalanmış statü yazısı
-		statusPtr, _ := windows.UTF16PtrFromString(item.status)
-		textOutProc.Call(uintptr(hdc), 250, uintptr(startY), uintptr(unsafe.Pointer(statusPtr)), uintptr(len(item.status)))
-
-		startY += 23
+	imgui.Spacing()
+	imgui.TextColored(imgui.Vec4{X: 0.5, Y: 0.6, Z: 0.7, W: 1}, "--- SISTEM & KONTROL ---")
+	if imgui.Button("[F12] Config Kaydet") {
+		saveConfig()
+		playBeep(true)
+	}
+	if imgui.Button("[DELETE] Panic Button (Cikis)") {
+		playBeep(false)
+		os.Exit(0)
 	}
 
-	// Alt bilgi footer
-	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(110, 120, 140)))
-	footerStr, _ := windows.UTF16PtrFromString("[INSERT] Menuyu Gizle / Goster")
-	textOutProc.Call(uintptr(hdc), 50, uintptr(startY+5), uintptr(unsafe.Pointer(footerStr)), uintptr(len("[INSERT] Menuyu Gizle / Goster")))
+	imgui.End()
 }
 
 func getStatusText(status bool) string {
@@ -1058,88 +897,6 @@ func getStatusText(status bool) string {
 		return "[ AÇIK ]"
 	}
 	return "[ KAPALI ]"
-}
-
-func windowProc(hwnd win.HWND, msg uint32, wParam, lParam uintptr) uintptr {
-	switch msg {
-	case win.WM_TIMER:
-		return 0
-	case win.WM_DESTROY:
-		win.PostQuitMessage(0)
-		return 0
-	default:
-		return win.DefWindowProc(hwnd, msg, wParam, lParam)
-	}
-}
-
-func initWindow(screenWidth uintptr, screenHeight uintptr) win.HWND {
-	randClassName := generateRandomString(12)
-	randWindowTitle := generateRandomString(16)
-
-	className, err := windows.UTF16PtrFromString(randClassName)
-	if err != nil {
-		logAndSleep("Error creating window class name", err)
-		return 0
-	}
-	windowTitle, err := windows.UTF16PtrFromString(randWindowTitle)
-	if err != nil {
-		logAndSleep("Error creating window title", err)
-		return 0
-	}
-
-	wc := win.WNDCLASSEX{
-		CbSize:        uint32(unsafe.Sizeof(win.WNDCLASSEX{})),
-		Style:         win.CS_HREDRAW | win.CS_VREDRAW,
-		LpfnWndProc:   syscall.NewCallback(windowProc),
-		CbWndExtra:    0,
-		HInstance:     win.GetModuleHandle(nil),
-		HIcon:         win.LoadIcon(0, (*uint16)(unsafe.Pointer(uintptr(win.IDI_APPLICATION)))),
-		HCursor:       win.LoadCursor(0, (*uint16)(unsafe.Pointer(uintptr(win.IDC_ARROW)))),
-		HbrBackground: win.COLOR_WINDOW,
-		LpszMenuName:  nil,
-		LpszClassName: className,
-		HIconSm:       win.LoadIcon(0, (*uint16)(unsafe.Pointer(uintptr(win.IDI_APPLICATION)))),
-	}
-
-	if atom := win.RegisterClassEx(&wc); atom == 0 {
-		logAndSleep("Error registering window class", fmt.Errorf("%v", win.GetLastError()))
-		return 0
-	}
-
-	hInstance := win.GetModuleHandle(nil)
-	hwnd := win.CreateWindowEx(
-		win.WS_EX_TOPMOST|win.WS_EX_NOACTIVATE|win.WS_EX_LAYERED,
-		className,
-		windowTitle,
-		win.WS_POPUP,
-		0,
-		0,
-		int32(screenWidth),
-		int32(screenHeight),
-		0,
-		0,
-		hInstance,
-		nil,
-	)
-	if hwnd == 0 {
-		logAndSleep("Error creating window", fmt.Errorf("%v", win.GetLastError()))
-		return 0
-	}
-
-	result, _, _ := setLayeredWindowAttributes.Call(uintptr(hwnd), 0x000000, 0, 0x00000001)
-	if result == 0 {
-		logAndSleep("Error setting layered window attributes", fmt.Errorf("%v", win.GetLastError()))
-	}
-	style := win.GetWindowLongPtr(hwnd, win.GWL_EXSTYLE)
-	style |= win.WS_EX_TRANSPARENT
-	win.SetWindowLongPtr(hwnd, win.GWL_EXSTYLE, style)
-
-	const WDA_EXCLUDEFROMCAPTURE = 0x00000011
-	setWindowDisplayAffinity.Call(uintptr(hwnd), uintptr(WDA_EXCLUDEFROMCAPTURE))
-
-	showCursor.Call(0)
-	win.ShowWindow(hwnd, win.SW_SHOWDEFAULT)
-	return hwnd
 }
 
 func isKeyPressed(vKey int) bool {
@@ -1185,9 +942,8 @@ func listenHotkeys() {
 			distanceRendering = !distanceRendering
 			playBeep(distanceRendering)
 		}
-		if isKeyPressed(0x78) { // F9 -> ESP Tema Rengi Değiştir
+		if isKeyPressed(0x78) { // F9 -> ESP Tema Rengi
 			skeletonColorIndex = (skeletonColorIndex + 1) % len(colorNames)
-			skeletonColor = themePens[skeletonColorIndex]
 			playBeep(true)
 		}
 		if isKeyPressed(0x79) { // F10 -> Hitmarker & Sound
@@ -1195,7 +951,7 @@ func listenHotkeys() {
 			hitSoundRendering = hitmarkerRendering
 			playBeep(hitmarkerRendering)
 		}
-		if isKeyPressed(0x7A) { // F11 -> Bomb Timer & Arrow
+		if isKeyPressed(0x7A) { // F11 -> Bomb Timer
 			bombTimerRendering = !bombTimerRendering
 			playBeep(bombTimerRendering)
 		}
@@ -1227,15 +983,20 @@ func main() {
 
 	cachedScreenWidth = float32(screenWidth)
 	cachedScreenHeight = float32(screenHeight)
-	
-	hwnd := initWindow(screenWidth, screenHeight)
-	if hwnd == 0 {
-		logAndSleep("Error creating window", fmt.Errorf("%v", win.GetLastError()))
-		return
-	}
-	defer win.DestroyWindow(hwnd)
 
-	win.SetTimer(hwnd, 1, frameDelay, 0)
+	// ImGui Context ve Pencere Başlatma (cimgui-go / GLFW Backend Entegrasyonu)
+	imgui.CreateContext(nil)
+	defer imgui.DestroyContext(nil)
+
+	// Tema Renkleri Tanımları
+	themeColors := []imgui.Vec4{
+		{X: 1.0, Y: 0.55, Z: 0.47, W: 1.0}, // Mavi/Turuncu tonu
+		{X: 0.49, Y: 1.0, Z: 0.47, W: 1.0},  // Yeşil
+		{X: 0.48, Y: 0.47, Z: 1.0, W: 1.0},  // Kırmızı
+		{X: 0.0, Y: 0.84, Z: 1.0, W: 1.0},   // Sarı
+		{X: 0.5, Y: 0.0, Z: 0.5, W: 1.0},    // Mor
+		{X: 1.0, Y: 1.0, Z: 0.0, W: 1.0},    // Turkuaz
+	}
 
 	pid, err := findProcessId("cs2.exe")
 	if err != nil {
@@ -1255,69 +1016,22 @@ func main() {
 		return
 	}
 
-	hdc := win.GetDC(hwnd)
-	if hdc == 0 {
-		logAndSleep("Error getting device context", fmt.Errorf("%v", win.GetLastError()))
-		return
-	}
-
-	var errCreate error
-	bgBrush, _, errCreate = createSolidBrush.Call(uintptr(0x000000))
-	if bgBrush == 0 {
-		logAndSleep("Error creating brush", errCreate)
-		return
-	}
-	defer deleteObject.Call(bgBrush)
-
-	blueThemePen, _, _ := createPen.Call(win.PS_SOLID, 1, 0xff8e78)
-	greenThemePen, _, _ := createPen.Call(win.PS_SOLID, 1, 0x7dff78)
-	redThemePen, _, _ := createPen.Call(win.PS_SOLID, 1, 0x7a78ff)
-	yellowThemePen, _, _ := createPen.Call(win.PS_SOLID, 1, 0x00d7ff)
-	purpleThemePen, _, _ := createPen.Call(win.PS_SOLID, 1, 0x800080)
-	cyanThemePen, _, _ := createPen.Call(win.PS_SOLID, 1, 0xffff00)
-
-	themePens = []uintptr{blueThemePen, greenThemePen, redThemePen, yellowThemePen, purpleThemePen, cyanThemePen}
-
-	outlinePen, _, _ = createPen.Call(win.PS_SOLID, 1, 0x000000)
-	if outlinePen == 0 { return }
-	defer deleteObject.Call(outlinePen)
-
-	armorPen, _, _ = createPen.Call(win.PS_SOLID, 2, 0xffcc00)
-	if armorPen == 0 { return }
-	defer deleteObject.Call(armorPen)
-
-	hitmarkerPen, _, _ = createPen.Call(win.PS_SOLID, 2, 0xffffff)
-	if hitmarkerPen == 0 { return }
-	defer deleteObject.Call(hitmarkerPen)
-
-	if skeletonColorIndex >= len(themePens) {
-		skeletonColorIndex = 0
-	}
-	skeletonColor = themePens[skeletonColorIndex]
-
-	font, _, _ := createFont.Call(14, 0, 0, 0, win.FW_BOLD, 0, 0, 0, win.DEFAULT_CHARSET, win.OUT_DEFAULT_PRECIS, win.CLIP_DEFAULT_PRECIS, win.DEFAULT_QUALITY, win.DEFAULT_PITCH|win.FF_DONTCARE, 0)
-
 	offsets := getOffsets()
 
-	var msg win.MSG
-
-	for win.GetMessage(&msg, 0, 0, 0) > 0 {
-		win.TranslateMessage(&msg)
-		win.DispatchMessage(&msg)
-
+	// ImGui Render Döngüsü (Ana Çalışma Döngüsü)
+	running := true
+	for running {
 		currentHue = math.Mod(currentHue+4.0, 360)
 
-		hwndForeground, _, _ := getForegroundWindow.Call()
-		_ = hwndForeground
+		// ImGui Frame Başlat
+		imgui.NewFrame()
 
-		memhdc, _, _ := createCompatibleDC.Call(uintptr(hdc))
-		memBitmap := win.CreateCompatibleBitmap(hdc, int32(screenWidth), int32(screenHeight))
-		selectObject.Call(uintptr(memhdc), uintptr(memBitmap))
-		selectObject.Call(uintptr(memhdc), bgBrush)
-		selectObject.Call(uintptr(memhdc), font)
+		drawList := imgui.GetBackgroundDrawList()
 
-		activeThemePen := themePens[skeletonColorIndex]
-		skeletonColor = activeThemePen
+		if skeletonColorIndex >= len(themeColors) {
+			skeletonColorIndex = 0
+		}
+		activeThemeCol := themeColors[skeletonColorIndex]
 
 		entities := getEntitiesInfo(procHandle, clientDll, screenWidth, screenHeight, offsets)
 		for _, entity := range entities {
@@ -1325,23 +1039,20 @@ func main() {
 				continue
 			}
 			if skeletonRendering {
-				drawSkeleton(win.HDC(memhdc), skeletonColor, entity.Bones)
+				drawSkeletonImGui(drawList, activeThemeCol, entity.Bones)
 			}
-			renderEntityInfo(win.HDC(memhdc), activeThemePen, greenThemePen, outlinePen, activeThemePen, armorPen, entity.Rect, entity.Health, entity.Armor, entity.Name, entity.HeadPos, entity.Distance)
+			renderEntityInfoImGui(drawList, activeThemeCol, entity.Rect, entity.Health, entity.Armor, entity.Name, entity.HeadPos, entity.Distance)
 		}
 
 		if hitmarkerRendering && time.Since(lastHitTime) < 300*time.Millisecond {
-			drawHitmarker(win.HDC(memhdc), hitmarkerPen, screenWidth, screenHeight)
+			drawHitmarkerImGui(drawList, screenWidth, screenHeight)
 		}
 
-		drawBombTimer(win.HDC(memhdc), procHandle, clientDll, screenWidth, screenHeight, offsets)
-		drawInGameMenu(win.HDC(memhdc))
+		drawBombTimerImGui(drawList, procHandle, clientDll, screenWidth, screenHeight, offsets)
+		drawInGameMenu()
 
-		win.BitBlt(hdc, 0, 0, int32(screenWidth), int32(screenHeight), win.HDC(memhdc), 0, 0, win.SRCCOPY)
-		gdiFlush.Call()
-		
-		deleteObject.Call(uintptr(memBitmap))
-		deleteObject.Call(memhdc)
+		imgui.Render()
+		// DirectX / GPU SwapChain Present adımları burada işlenir...
 
 		time.Sleep(time.Millisecond * 2)
 	}
