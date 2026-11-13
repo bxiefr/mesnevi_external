@@ -750,9 +750,7 @@ func drawBombTimerImGui(drawList *imgui.DrawList, procHandle windows.Handle, cli
 
 	if bx > 0 && by > 0 && bx < float32(screenWidth) && by < float32(screenHeight) {
 		col := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: rCol, Y: gCol, Z: 0, W: 1})
-		drawList.AddCircle(imgui.Vec2{X: bx, Y: by}, 15, col, 16, 2)
-		timerStr := fmt.Sprintf("%.1fS", timeLeft)
-		drawList.AddText(imgui.Vec2{X: bx - 12, Y: by - 30}, col, timerStr)
+		drawList.AddCircle(imgui.Vec2{X: bx, Y: by}, 15, col)
 	}
 }
 
@@ -762,7 +760,7 @@ func drawSkeletonImGui(drawList *imgui.DrawList, col imgui.Vec4, bones map[strin
 		p1, ok1 := bones[b1]
 		p2, ok2 := bones[b2]
 		if ok1 && ok2 {
-			drawList.AddLine(imgui.Vec2{X: p1.X, Y: p1.Y}, imgui.Vec2{X: p2.X, Y: p2.Y}, c, 1.5)
+			drawList.AddLine(imgui.Vec2{X: p1.X, Y: p1.Y}, imgui.Vec2{X: p2.X, Y: p2.Y}, c)
 		}
 	}
 
@@ -791,10 +789,10 @@ func drawHitmarkerImGui(drawList *imgui.DrawList, screenWidth, screenHeight uint
 	gap := float32(4)
 	col := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: 1, Y: 1, Z: 1, W: 1})
 
-	drawList.AddLine(imgui.Vec2{X: centerX - size, Y: centerY - size}, imgui.Vec2{X: centerX - gap, Y: centerY - gap}, col, 2)
-	drawList.AddLine(imgui.Vec2{X: centerX + gap, Y: centerY + gap}, imgui.Vec2{X: centerX + size, Y: centerY + size}, col, 2)
-	drawList.AddLine(imgui.Vec2{X: centerX + size, Y: centerY - size}, imgui.Vec2{X: centerX + gap, Y: centerY - gap}, col, 2)
-	drawList.AddLine(imgui.Vec2{X: centerX - gap, Y: centerY + gap}, imgui.Vec2{X: centerX - size, Y: centerY + size}, col, 2)
+	drawList.AddLine(imgui.Vec2{X: centerX - size, Y: centerY - size}, imgui.Vec2{X: centerX - gap, Y: centerY - gap}, col)
+	drawList.AddLine(imgui.Vec2{X: centerX + gap, Y: centerY + gap}, imgui.Vec2{X: centerX + size, Y: centerY + size}, col)
+	drawList.AddLine(imgui.Vec2{X: centerX + size, Y: centerY - size}, imgui.Vec2{X: centerX + gap, Y: centerY - gap}, col)
+	drawList.AddLine(imgui.Vec2{X: centerX - gap, Y: centerY + gap}, imgui.Vec2{X: centerX - size, Y: centerY + size}, col)
 }
 
 func renderEntityInfoImGui(drawList *imgui.DrawList, themeCol imgui.Vec4, rect Rectangle, hp int32, armor int32, name string, headPos Vector3, distance float32) {
@@ -802,13 +800,12 @@ func renderEntityInfoImGui(drawList *imgui.DrawList, themeCol imgui.Vec4, rect R
 	tCol := imgui.ColorConvertFloat4ToU32(themeCol)
 
 	if boxRendering {
-		drawList.AddRect(imgui.Vec2{X: rect.Left, Y: rect.Top}, imgui.Vec2{X: rect.Right, Y: rect.Bottom}, tCol, 0, 0, 1.5)
-		drawList.AddRect(imgui.Vec2{X: rect.Left - 1, Y: rect.Top - 1}, imgui.Vec2{X: rect.Right + 1, Y: rect.Bottom + 1}, black, 0, 0, 1)
+		drawList.AddRect(imgui.Vec2{X: rect.Left, Y: rect.Top}, imgui.Vec2{X: rect.Right, Y: rect.Bottom}, tCol)
 	}
 
 	if headCircle {
 		radius := (headPos.Z - headPos.Y) / 2
-		drawList.AddCircle(imgui.Vec2{X: headPos.X, Y: headPos.Y + radius}, radius, tCol, 16, 1.5)
+		drawList.AddCircle(imgui.Vec2{X: headPos.X, Y: headPos.Y + radius}, radius, tCol)
 	}
 
 	if healthBarRendering {
@@ -821,8 +818,7 @@ func renderEntityInfoImGui(drawList *imgui.DrawList, themeCol imgui.Vec4, rect R
 		hpTop := rect.Bottom - hpHeight
 		hpCol := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: float32(100-hp) / 100.0, Y: float32(hp) / 100.0, Z: 0, W: 1})
 
-		drawList.AddLine(imgui.Vec2{X: rect.Left - 4, Y: hpTop}, imgui.Vec2{X: rect.Left - 4, Y: rect.Bottom}, hpCol, 2)
-		drawList.AddRect(imgui.Vec2{X: rect.Left - 6, Y: rect.Top - 1}, imgui.Vec2{X: rect.Left - 2, Y: rect.Bottom + 1}, black, 0, 0, 1)
+		drawList.AddLine(imgui.Vec2{X: rect.Left - 4, Y: hpTop}, imgui.Vec2{X: rect.Left - 4, Y: rect.Bottom}, hpCol)
 	}
 
 	if armorBarRendering && armor > 0 {
@@ -833,18 +829,7 @@ func renderEntityInfoImGui(drawList *imgui.DrawList, themeCol imgui.Vec4, rect R
 		armorTop := rect.Bottom - armorHeight
 		armorCol := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: 0, Y: 0.8, Z: 1, W: 1})
 
-		drawList.AddLine(imgui.Vec2{X: rect.Right + 4, Y: armorTop}, imgui.Vec2{X: rect.Right + 4, Y: rect.Bottom}, armorCol, 2)
-	}
-
-	if nameRendering {
-		white := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: 1, Y: 1, Z: 1, W: 1})
-		drawList.AddText(imgui.Vec2{X: rect.Left + (rect.Right-rect.Left)/2 - float32(len(name)*3), Y: rect.Top - 15}, white, name)
-	}
-
-	if distanceRendering {
-		distStr := fmt.Sprintf("%.0fm", distance)
-		yellow := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: 1, Y: 1, Z: 0.5, W: 1})
-		drawList.AddText(imgui.Vec2{X: rect.Left + (rect.Right-rect.Left)/2 - 10, Y: rect.Bottom + 2}, yellow, distStr)
+		drawList.AddLine(imgui.Vec2{X: rect.Right + 4, Y: armorTop}, imgui.Vec2{X: rect.Right + 4, Y: rect.Bottom}, armorCol)
 	}
 }
 
