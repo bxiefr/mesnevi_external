@@ -87,25 +87,25 @@ type Entity struct {
 }
 
 type Offset struct {
-	DwViewMatrix             uintptr `json:"dwViewMatrix"`
-	DwLocalPlayerPawn        uintptr `json:"dwLocalPlayerPawn"`
-	DwEntityList             uintptr `json:"dwEntityList"`
-	DwPlantedC4              uintptr `json:"dwPlantedC4"`
-	DwGlobalVars             uintptr `json:"dwGlobalVars"`
-	M_hPlayerPawn            uintptr `json:"m_hPlayerPawn"`
-	M_iHealth                uintptr `json:"m_iHealth"`
-	M_lifeState              uintptr `json:"m_lifeState"`
-	M_iTeamNum               uintptr `json:"m_iTeamNum"`
-	M_vOldOrigin             uintptr `json:"m_vOldOrigin"`
-	M_pGameSceneNode         uintptr `json:"m_pGameSceneNode"`
-	M_modelState             uintptr `json:"m_modelState"`
-	M_boneArray              uintptr `json:"m_boneArray"`
-	M_nodeToWorld            uintptr `json:"m_nodeToWorld"`
-	M_sSanitizedPlayerName   uintptr `json:"m_sSanitizedPlayerName"`
-	M_ArmorValue             uintptr `json:"m_ArmorValue"`
-	M_pBulletServices        uintptr `json:"m_pBulletServices"`
-	M_totalHitsOnServer      uintptr `json:"m_totalHitsOnServer"`
-	M_flC4Blow               uintptr `json:"m_flC4Blow"`
+	DwViewMatrix           uintptr `json:"dwViewMatrix"`
+	DwLocalPlayerPawn      uintptr `json:"dwLocalPlayerPawn"`
+	DwEntityList           uintptr `json:"dwEntityList"`
+	DwPlantedC4            uintptr `json:"dwPlantedC4"`
+	DwGlobalVars           uintptr `json:"dwGlobalVars"`
+	M_hPlayerPawn          uintptr `json:"m_hPlayerPawn"`
+	M_iHealth              uintptr `json:"m_iHealth"`
+	M_lifeState            uintptr `json:"m_lifeState"`
+	M_iTeamNum             uintptr `json:"m_iTeamNum"`
+	M_vOldOrigin           uintptr `json:"m_vOldOrigin"`
+	M_pGameSceneNode       uintptr `json:"m_pGameSceneNode"`
+	M_modelState           uintptr `json:"m_modelState"`
+	M_boneArray            uintptr `json:"m_boneArray"`
+	M_nodeToWorld          uintptr `json:"m_nodeToWorld"`
+	M_sSanitizedPlayerName uintptr `json:"m_sSanitizedPlayerName"`
+	M_ArmorValue           uintptr `json:"m_ArmorValue"`
+	M_pBulletServices      uintptr `json:"m_pBulletServices"`
+	M_totalHitsOnServer    uintptr `json:"m_totalHitsOnServer"`
+	M_flC4Blow             uintptr `json:"m_flC4Blow"`
 }
 
 type Config struct {
@@ -973,12 +973,11 @@ func main() {
 	imgui.CreateContext()
 	defer imgui.DestroyContext()
 
+	// Font atlasını zorla build et (Assertion hatasını önler)
 	io := imgui.CurrentIO()
 	fonts := io.Fonts()
 	fonts.AddFontDefault(nil)
 	fonts.Build()
-
-	themeColors := []imgui.Vec4{
 
 	themeColors := []imgui.Vec4{
 		{X: 1.0, Y: 0.55, Z: 0.47, W: 1.0},
@@ -1013,7 +1012,6 @@ func main() {
 	for running {
 		currentHue = math.Mod(currentHue+4.0, 360)
 
-		io := imgui.CurrentIO()
 		io.SetDisplaySize(imgui.Vec2{X: cachedScreenWidth, Y: cachedScreenHeight})
 
 		imgui.NewFrame()
