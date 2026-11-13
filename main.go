@@ -976,7 +976,7 @@ func drawInGameMenu(hdc win.HDC) {
 
 	currentColor := colorNames[skeletonColorIndex]
 
-	// Kategorize edilmiş menü öğeleri (label, status, active, isHeader)
+	// Kategorize edilmiş menü öğeleri
 	items := []struct {
 		label    string
 		status   string
@@ -991,15 +991,15 @@ func drawInGameMenu(hdc win.HDC) {
 		
 		{"--- GÖRSEL & BİLGİ ---", "", false, true},
 		{"[F5] Health Bar", getStatusText(healthBarRendering), healthBarRendering, false},
-		{"[F9] Armor Bar", getStatusText(armorBarRendering), armorBarRendering, false},
-		{"[F6] Player Name", getStatusText(nameRendering), nameRendering, false},
-		{"[F7] Distance Display", getStatusText(distanceRendering), distanceRendering, false},
+		{"[F6] Armor Bar", getStatusText(armorBarRendering), armorBarRendering, false},
+		{"[F7] Player Name", getStatusText(nameRendering), nameRendering, false},
+		{"[F8] Distance Display", getStatusText(distanceRendering), distanceRendering, false},
+		{"[F9] ESP Tema Rengi", "[" + currentColor + "]", true, false},
 		{"[F10] Hitmarker & Sound", getStatusText(hitmarkerRendering), hitmarkerRendering, false},
-		{"[F12] Bomb Timer", getStatusText(bombTimerRendering), bombTimerRendering, false},
-		{"[F8] ESP Tema Rengi", "[" + currentColor + "]", true, false},
+		{"[F11] Bomb Timer", getStatusText(bombTimerRendering), bombTimerRendering, false},
 
 		{"--- SİSTEM & KONTROL ---", "", false, true},
-		{"[F11] Config Kaydet", "[ KAYDET ]", true, false},
+		{"[F12] Config Kaydet", "[ KAYDET ]", true, false},
 		{"[DELETE] Panic Button", "[ ÇIKIŞ ]", true, false},
 	}
 
@@ -1153,11 +1153,6 @@ func listenHotkeys() {
 			menuOpen = !menuOpen
 			playBeep(menuOpen)
 		}
-		if isKeyPressed(0x77) { // F8 -> ESP Tema Rengi Değiştir
-			skeletonColorIndex = (skeletonColorIndex + 1) % len(colorNames)
-			skeletonColor = themePens[skeletonColorIndex]
-			playBeep(true)
-		}
 		if isKeyPressed(0x70) { // F1 -> Box ESP
 			boxRendering = !boxRendering
 			playBeep(boxRendering)
@@ -1178,28 +1173,33 @@ func listenHotkeys() {
 			healthBarRendering = !healthBarRendering
 			playBeep(healthBarRendering)
 		}
-		if isKeyPressed(0x75) { // F6 -> Player Name
+		if isKeyPressed(0x75) { // F6 -> Armor Bar
+			armorBarRendering = !armorBarRendering
+			playBeep(armorBarRendering)
+		}
+		if isKeyPressed(0x76) { // F7 -> Player Name
 			nameRendering = !nameRendering
 			playBeep(nameRendering)
 		}
-		if isKeyPressed(0x76) { // F7 -> Distance Display
+		if isKeyPressed(0x77) { // F8 -> Distance Display
 			distanceRendering = !distanceRendering
 			playBeep(distanceRendering)
 		}
-		if isKeyPressed(0x78) { // F9 -> Armor Bar
-			armorBarRendering = !armorBarRendering
-			playBeep(armorBarRendering)
+		if isKeyPressed(0x78) { // F9 -> ESP Tema Rengi Değiştir
+			skeletonColorIndex = (skeletonColorIndex + 1) % len(colorNames)
+			skeletonColor = themePens[skeletonColorIndex]
+			playBeep(true)
 		}
 		if isKeyPressed(0x79) { // F10 -> Hitmarker & Sound
 			hitmarkerRendering = !hitmarkerRendering
 			hitSoundRendering = hitmarkerRendering
 			playBeep(hitmarkerRendering)
 		}
-		if isKeyPressed(0x7B) { // F12 -> Bomb Timer & Arrow
+		if isKeyPressed(0x7A) { // F11 -> Bomb Timer & Arrow
 			bombTimerRendering = !bombTimerRendering
 			playBeep(bombTimerRendering)
 		}
-		if isKeyPressed(0x7A) { // F11 -> Config Kaydet
+		if isKeyPressed(0x7B) { // F12 -> Config Kaydet
 			saveConfig()
 			playBeep(true)
 		}
