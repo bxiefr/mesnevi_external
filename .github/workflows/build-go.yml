@@ -30,7 +30,7 @@ jobs:
           - target_branch: "v1.8.9"
             version: "1.8.9"
             enable: ${{ inputs.build_v189 == true || github.event_name == 'push' }}
-            - target_branch: "v1.9.0"
+          - target_branch: "v1.9.0"
             version: "1.9.0"
             enable: ${{ inputs.build_v190 == true || github.event_name == 'push' }}
 
