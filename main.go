@@ -1006,6 +1006,9 @@ func main() {
 	for running {
 		currentHue = math.Mod(currentHue+4.0, 360)
 
+		io := imgui.GetIO()
+		io.SetDisplaySize(imgui.Vec2{X: cachedScreenWidth, Y: cachedScreenHeight})
+
 		imgui.NewFrame()
 
 		drawList := imgui.WindowDrawList()
