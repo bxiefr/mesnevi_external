@@ -973,11 +973,9 @@ func main() {
 	imgui.CreateContext()
 	defer imgui.DestroyContext()
 
-	// Font atlasını zorla build et (Assertion hatasını önler)
+	// Font atlasını varsayılan ayarlarla başlat
 	io := imgui.CurrentIO()
-	fonts := io.Fonts()
-	fonts.AddFontDefault(nil)
-	fonts.Build()
+	io.Fonts().AddFontDefault()
 
 	themeColors := []imgui.Vec4{
 		{X: 1.0, Y: 0.55, Z: 0.47, W: 1.0},
