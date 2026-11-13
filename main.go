@@ -796,7 +796,6 @@ func drawHitmarkerImGui(drawList *imgui.DrawList, screenWidth, screenHeight uint
 }
 
 func renderEntityInfoImGui(drawList *imgui.DrawList, themeCol imgui.Vec4, rect Rectangle, hp int32, armor int32, name string, headPos Vector3, distance float32) {
-	black := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: 0, Y: 0, Z: 0, W: 1})
 	tCol := imgui.ColorConvertFloat4ToU32(themeCol)
 
 	if boxRendering {
@@ -1009,7 +1008,7 @@ func main() {
 
 		imgui.NewFrame()
 
-		drawList := imgui.GetBackgroundDrawList()
+		drawList := imgui.GetBackgroundDrawListNil()
 
 		if skeletonColorIndex >= len(themeColors) {
 			skeletonColorIndex = 0
