@@ -63,10 +63,21 @@ jobs:
         echo "BUILDSTAMP=$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())" >> $env:GITHUB_ENV
         echo "TAGNAME=${{ matrix.version }}" >> $env:GITHUB_ENV
 
-    - name: Build Windows Executable
+        - name: Build Windows Executable
       if: ${{ matrix.enable == true }}
+      env:
+        CGO_ENABLED: 1
+        CC: gcc
+        CXX: g++
       run: |
-        go build -ldflags="-s -w -X 'main.currentVersion=${{ matrix.version }}' -X 'main.buildStamp=${{ env.BUILDSTAMP }}'" -o mesnevi.exe .
+        $ldflags = "-s -w -H windowsgui -X 'main.currentVersion=${{ matrix.version }}' -X 'main.buildStamp=${{ env.BUILDSTAMP }}' -extldflags '-static -static-libgcc -static-libstdc++'"
+        go build "-ldflags=$ldflags" -o mesnevi.exe .
+      shell: pwsh
+
+    - name: Check DLL Dependencies
+      if: ${{ matrix.enable == true }}
+      run: objdump -p mesnevi.exe | Select-String "DLL Name"
+      shell: pwsh
 
     - name: Prepare Release Folder
       if: ${{ matrix.enable == true }}
