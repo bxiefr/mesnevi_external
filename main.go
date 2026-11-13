@@ -17,7 +17,6 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 	"unicode"
 	"unsafe"
@@ -110,19 +109,19 @@ type Offset struct {
 }
 
 type Config struct {
-	TeamCheck             bool `json:"teamCheck"`
-	HeadCircle            bool `json:"headCircle"`
-	SkeletonRendering     bool `json:"skeletonRendering"`
-	BoxRendering          bool `json:"boxRendering"`
-	NameRendering         bool `json:"nameRendering"`
-	HealthBarRendering    bool `json:"healthBarRendering"`
-	ArmorBarRendering     bool `json:"armorBarRendering"`
-	HealthTextRendering   bool `json:"healthTextRendering"`
-	DistanceRendering     bool `json:"distanceRendering"`
-	HitmarkerRendering    bool `json:"hitmarkerRendering"`
-	HitSoundRendering     bool `json:"hitSoundRendering"`
-	BombTimerRendering    bool `json:"bombTimerRendering"`
-	SkeletonColorIndex    int  `json:"skeletonColorIndex"`
+	TeamCheck           bool `json:"teamCheck"`
+	HeadCircle          bool `json:"headCircle"`
+	SkeletonRendering   bool `json:"skeletonRendering"`
+	BoxRendering        bool `json:"boxRendering"`
+	NameRendering       bool `json:"nameRendering"`
+	HealthBarRendering  bool `json:"healthBarRendering"`
+	ArmorBarRendering   bool `json:"armorBarRendering"`
+	HealthTextRendering bool `json:"healthTextRendering"`
+	DistanceRendering   bool `json:"distanceRendering"`
+	HitmarkerRendering  bool `json:"hitmarkerRendering"`
+	HitSoundRendering   bool `json:"hitSoundRendering"`
+	BombTimerRendering  bool `json:"bombTimerRendering"`
+	SkeletonColorIndex  int  `json:"skeletonColorIndex"`
 }
 
 var (
@@ -147,21 +146,21 @@ const (
 )
 
 var (
-	teamCheck             bool    = true
-	headCircle            bool    = true
-	skeletonRendering     bool    = true
-	boxRendering          bool    = true
-	nameRendering         bool    = true
-	healthBarRendering    bool    = true
-	armorBarRendering     bool    = true
-	healthTextRendering   bool    = true
-	distanceRendering     bool    = true
-	hitmarkerRendering    bool    = true
-	hitSoundRendering     bool    = true
-	bombTimerRendering    bool    = true
-	menuOpen              bool    = true
-	frameDelay            uint32  = 15
-	currentHue            float64 = 0
+	teamCheck           bool    = true
+	headCircle          bool    = true
+	skeletonRendering   bool    = true
+	boxRendering        bool    = true
+	nameRendering       bool    = true
+	healthBarRendering  bool    = true
+	armorBarRendering   bool    = true
+	healthTextRendering bool    = true
+	distanceRendering   bool    = true
+	hitmarkerRendering  bool    = true
+	hitSoundRendering   bool    = true
+	bombTimerRendering  bool    = true
+	menuOpen            bool    = true
+	frameDelay          uint32  = 15
+	currentHue          float64 = 0
 
 	lastHits      int32 = -1
 	lastHitTime   time.Time
@@ -355,28 +354,6 @@ func generateRandomString(length int) string {
 	return string(b)
 }
 
-func hsvToRGB(h, s, v float64) (byte, byte, byte) {
-	c := v * s
-	x := c * (1 - math.Abs(math.Mod(h/60.0, 2)-1))
-	m := v - c
-	var r1, g1, b1 float64
-	switch {
-	case 0 <= h && h < 60:
-		r1, g1, b1 = c, x, 0
-	case 60 <= h && h < 120:
-		r1, g1, b1 = x, c, 0
-	case 120 <= h && h < 180:
-		r1, g1, b1 = 0, c, x
-	case 180 <= h && h < 240:
-		r1, g1, b1 = 0, x, c
-	case 240 <= h && h < 300:
-		r1, g1, b1 = x, 0, c
-	default:
-		r1, g1, b1 = c, 0, x
-	}
-	return byte((r1 + m) * 255), byte((g1 + m) * 255), byte((b1 + m) * 255)
-}
-
 func playBeep(enabled bool) {
 	if enabled {
 		beepProc.Call(800, 100)
@@ -434,25 +411,25 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		return entities
 	}
 	var (
-		localPlayerP       uintptr
+		localPlayerP         uintptr
 		localPlayerGameScene uintptr
 		localPlayerSceneOrigin Vector3
-		localTeam          int32
-		listEntry          uintptr
-		gameScene          uintptr
-		entityController   uintptr
+		localTeam            int32
+		listEntry            uintptr
+		gameScene            uintptr
+		entityController     uintptr
 		entityControllerPawn uintptr
-		entityPawn         uintptr
-		entityNameAddress  uintptr
-		entityBoneArray    uintptr
-		entityTeam         int32
-		entityHealth       int32
-		entityArmor        int32
-		entityLifeState    int32
-		entityName         string
-		sanitizedNameStr   string
-		entityOrigin       Vector3
-		viewMatrix         Matrix
+		entityPawn           uintptr
+		entityNameAddress    uintptr
+		entityBoneArray      uintptr
+		entityTeam           int32
+		entityHealth         int32
+		entityArmor          int32
+		entityLifeState      int32
+		entityName           string
+		sanitizedNameStr     string
+		entityOrigin         Vector3
+		viewMatrix           Matrix
 	)
 	bones := map[string]int{
 		"head":        6,
@@ -694,7 +671,7 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 	return entities
 }
 
-func drawBombTimerImGui(drawList imgui.DrawListPtr, procHandle windows.Handle, clientDll uintptr, screenWidth, screenHeight uintptr, offsets Offset) {
+func drawBombTimerImGui(drawList imgui.ImDrawListPtr, procHandle windows.Handle, clientDll uintptr, screenWidth, screenHeight uintptr, offsets Offset) {
 	if !bombTimerRendering {
 		return
 	}
@@ -755,7 +732,7 @@ func drawBombTimerImGui(drawList imgui.DrawListPtr, procHandle windows.Handle, c
 	}
 }
 
-func drawSkeletonImGui(drawList imgui.DrawListPtr, col imgui.Vec4, bones map[string]Vector2) {
+func drawSkeletonImGui(drawList imgui.ImDrawListPtr, col imgui.Vec4, bones map[string]Vector2) {
 	c := imgui.ColorConvertFloat4ToU32(col)
 	drawLine := func(b1, b2 string) {
 		p1, ok1 := bones[b1]
@@ -783,7 +760,7 @@ func drawSkeletonImGui(drawList imgui.DrawListPtr, col imgui.Vec4, bones map[str
 	drawLine("arm_lower_R", "hand_R")
 }
 
-func drawHitmarkerImGui(drawList imgui.DrawListPtr, screenWidth, screenHeight uintptr) {
+func drawHitmarkerImGui(drawList imgui.ImDrawListPtr, screenWidth, screenHeight uintptr) {
 	centerX := float32(screenWidth / 2)
 	centerY := float32(screenHeight / 2)
 	size := float32(8)
@@ -796,7 +773,7 @@ func drawHitmarkerImGui(drawList imgui.DrawListPtr, screenWidth, screenHeight ui
 	drawList.AddLine(imgui.Vec2{X: centerX - gap, Y: centerY + gap}, imgui.Vec2{X: centerX - size, Y: centerY + size}, col, 2)
 }
 
-func renderEntityInfoImGui(drawList imgui.DrawListPtr, themeCol imgui.Vec4, rect Rectangle, hp int32, armor int32, name string, headPos Vector3, distance float32) {
+func renderEntityInfoImGui(drawList imgui.ImDrawListPtr, themeCol imgui.Vec4, rect Rectangle, hp int32, armor int32, name string, headPos Vector3, distance float32) {
 	black := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: 0, Y: 0, Z: 0, W: 1})
 	tCol := imgui.ColorConvertFloat4ToU32(themeCol)
 
@@ -853,8 +830,8 @@ func drawInGameMenu() {
 	}
 
 	currentColor := colorNames[skeletonColorIndex]
-	imgui.SetNextWindowSize(imgui.Vec2{X: 340, Y: 500}, imgui.CondOnce)
-	imgui.Begin("=== MESNEVI EXTERNAL v"+currentVersion+" ===", &menuOpen, imgui.WindowFlagsNoResize)
+	imgui.SetNextWindowSize(imgui.Vec2{X: 340, Y: 500})
+	imgui.Begin("=== MESNEVI EXTERNAL v" + currentVersion + " ===")
 
 	imgui.TextColored(imgui.Vec4{X: 0.5, Y: 0.6, Z: 0.7, W: 1}, "--- ESP AYARLARI ---")
 	imgui.Checkbox("[F1] Box ESP", &boxRendering)
@@ -984,18 +961,17 @@ func main() {
 	cachedScreenWidth = float32(screenWidth)
 	cachedScreenHeight = float32(screenHeight)
 
-	// ImGui Context ve Pencere Başlatma (cimgui-go / GLFW Backend Entegrasyonu)
-	imgui.CreateContext(nil)
-	defer imgui.DestroyContext(nil)
+	// ImGui Context Başlatma
+	imgui.CreateContext()
+	defer imgui.DestroyContext()
 
-	// Tema Renkleri Tanımları
 	themeColors := []imgui.Vec4{
-		{X: 1.0, Y: 0.55, Z: 0.47, W: 1.0}, // Mavi/Turuncu tonu
-		{X: 0.49, Y: 1.0, Z: 0.47, W: 1.0},  // Yeşil
-		{X: 0.48, Y: 0.47, Z: 1.0, W: 1.0},  // Kırmızı
-		{X: 0.0, Y: 0.84, Z: 1.0, W: 1.0},   // Sarı
-		{X: 0.5, Y: 0.0, Z: 0.5, W: 1.0},    // Mor
-		{X: 1.0, Y: 1.0, Z: 0.0, W: 1.0},    // Turkuaz
+		{X: 1.0, Y: 0.55, Z: 0.47, W: 1.0},
+		{X: 0.49, Y: 1.0, Z: 0.47, W: 1.0},
+		{X: 0.48, Y: 0.47, Z: 1.0, W: 1.0},
+		{X: 0.0, Y: 0.84, Z: 1.0, W: 1.0},
+		{X: 0.5, Y: 0.0, Z: 0.5, W: 1.0},
+		{X: 1.0, Y: 1.0, Z: 0.0, W: 1.0},
 	}
 
 	pid, err := findProcessId("cs2.exe")
@@ -1018,15 +994,13 @@ func main() {
 
 	offsets := getOffsets()
 
-	// ImGui Render Döngüsü (Ana Çalışma Döngüsü)
 	running := true
 	for running {
 		currentHue = math.Mod(currentHue+4.0, 360)
 
-		// ImGui Frame Başlat
 		imgui.NewFrame()
 
-		drawList := imgui.GetBackgroundDrawList()
+		drawList := imgui.GetBackgroundDrawListNil()
 
 		if skeletonColorIndex >= len(themeColors) {
 			skeletonColorIndex = 0
@@ -1052,7 +1026,6 @@ func main() {
 		drawInGameMenu()
 
 		imgui.Render()
-		// DirectX / GPU SwapChain Present adımları burada işlenir...
 
 		time.Sleep(time.Millisecond * 2)
 	}
