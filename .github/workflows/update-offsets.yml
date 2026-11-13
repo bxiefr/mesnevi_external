@@ -171,7 +171,7 @@ jobs:
 
           git fetch origin
 
-          branches=("v1.8.9")
+          branches=("v1.8.9", "v1.9.0")
 
           for branch in "${branches[@]}"; do
             echo "Processing branch: $branch"
@@ -204,7 +204,7 @@ jobs:
           tz = timezone(timedelta(hours=3))
           now = datetime.now(tz).isoformat(timespec="seconds")
 
-          branches = ["v1.8.9"]
+          branches = ["v1.8.9", "v1.9.0"]
           data = {
               "offset_sync": now,
               "branches": [{"name": b, "updated_at": now} for b in branches]
