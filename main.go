@@ -435,25 +435,25 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		return entities
 	}
 	var (
-		localPlayerP         uintptr
-		localPlayerGameScene uintptr
+		localPlayerP           uintptr
+		localPlayerGameScene   uintptr
 		localPlayerSceneOrigin Vector3
-		localTeam            int32
-		listEntry            uintptr
-		gameScene            uintptr
-		entityController     uintptr
-		entityControllerPawn uintptr
-		entityPawn           uintptr
-		entityNameAddress    uintptr
-		entityBoneArray      uintptr
-		entityTeam           int32
-		entityHealth         int32
-		entityArmor          int32
-		entityLifeState      int32
-		entityName           string
-		sanitizedNameStr     string
-		entityOrigin         Vector3
-		viewMatrix           Matrix
+		localTeam              int32
+		listEntry              uintptr
+		gameScene              uintptr
+		entityController       uintptr
+		entityControllerPawn   uintptr
+		entityPawn             uintptr
+		entityNameAddress      uintptr
+		entityBoneArray        uintptr
+		entityTeam             int32
+		entityHealth           int32
+		entityArmor            int32
+		entityLifeState        int32
+		entityName             string
+		sanitizedNameStr       string
+		entityOrigin           Vector3
+		viewMatrix             Matrix
 	)
 	bones := map[string]int{
 		"head":        6,
@@ -695,7 +695,7 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 	return entities
 }
 
-func drawBombTimerImGui(drawList imgui.ImDrawListPtr, procHandle windows.Handle, clientDll uintptr, screenWidth, screenHeight uintptr, offsets Offset) {
+func drawBombTimerImGui(drawList *imgui.DrawList, procHandle windows.Handle, clientDll uintptr, screenWidth, screenHeight uintptr, offsets Offset) {
 	if !bombTimerRendering {
 		return
 	}
@@ -756,7 +756,7 @@ func drawBombTimerImGui(drawList imgui.ImDrawListPtr, procHandle windows.Handle,
 	}
 }
 
-func drawSkeletonImGui(drawList imgui.ImDrawListPtr, col imgui.Vec4, bones map[string]Vector2) {
+func drawSkeletonImGui(drawList *imgui.DrawList, col imgui.Vec4, bones map[string]Vector2) {
 	c := imgui.ColorConvertFloat4ToU32(col)
 	drawLine := func(b1, b2 string) {
 		p1, ok1 := bones[b1]
@@ -784,7 +784,7 @@ func drawSkeletonImGui(drawList imgui.ImDrawListPtr, col imgui.Vec4, bones map[s
 	drawLine("arm_lower_R", "hand_R")
 }
 
-func drawHitmarkerImGui(drawList imgui.ImDrawListPtr, screenWidth, screenHeight uintptr) {
+func drawHitmarkerImGui(drawList *imgui.DrawList, screenWidth, screenHeight uintptr) {
 	centerX := float32(screenWidth / 2)
 	centerY := float32(screenHeight / 2)
 	size := float32(8)
@@ -797,7 +797,7 @@ func drawHitmarkerImGui(drawList imgui.ImDrawListPtr, screenWidth, screenHeight 
 	drawList.AddLine(imgui.Vec2{X: centerX - gap, Y: centerY + gap}, imgui.Vec2{X: centerX - size, Y: centerY + size}, col, 2)
 }
 
-func renderEntityInfoImGui(drawList imgui.ImDrawListPtr, themeCol imgui.Vec4, rect Rectangle, hp int32, armor int32, name string, headPos Vector3, distance float32) {
+func renderEntityInfoImGui(drawList *imgui.DrawList, themeCol imgui.Vec4, rect Rectangle, hp int32, armor int32, name string, headPos Vector3, distance float32) {
 	black := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: 0, Y: 0, Z: 0, W: 1})
 	tCol := imgui.ColorConvertFloat4ToU32(themeCol)
 
@@ -1024,7 +1024,7 @@ func main() {
 
 		imgui.NewFrame()
 
-		drawList := imgui.GetBackgroundDrawListNil()
+		drawList := imgui.GetBackgroundDrawList()
 
 		if skeletonColorIndex >= len(themeColors) {
 			skeletonColorIndex = 0
