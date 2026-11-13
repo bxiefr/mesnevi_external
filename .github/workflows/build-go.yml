@@ -68,15 +68,10 @@ jobs:
 
     - name: Pin cimgui-go version
       if: ${{ matrix.enable == true }}
-      env:
-        # Kodun calistigi son tarih (YYYY-MM-DD). Gerekirse degistir.
-        CIMGUI_BEFORE: "2024-06-01"
       run: |
-        git clone https://github.com/AllenDang/cimgui-go.git "$env:RUNNER_TEMP\cimgui"
-        $sha = git -C "$env:RUNNER_TEMP\cimgui" rev-list -n 1 --before="$env:CIMGUI_BEFORE" origin/main
-        echo "Kilitlenen commit: $sha"
-        go get "github.com/AllenDang/cimgui-go@$sha"
+        go get github.com/AllenDang/cimgui-go@fccd036587214a91c21c5db4f2aba18ab02ed583
         go mod tidy
+        go list -m github.com/AllenDang/cimgui-go
       shell: pwsh
 
     - name: Set Environment Info
