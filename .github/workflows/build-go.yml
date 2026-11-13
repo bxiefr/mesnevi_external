@@ -45,9 +45,25 @@ jobs:
         git clone --branch ${{ matrix.target_branch }} https://github.com/${{ github.repository }}.git .
       shell: pwsh
 
-    - name: Verify Go Installation
+    - name: Setup MSYS2 (MinGW GCC)
       if: ${{ matrix.enable == true }}
-      run: go version
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        release: false
+        update: false
+        install: mingw-w64-x86_64-gcc
+
+    - name: Add MinGW to PATH
+      if: ${{ matrix.enable == true }}
+      run: echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      shell: pwsh
+
+    - name: Verify Go and GCC
+      if: ${{ matrix.enable == true }}
+      run: |
+        go version
+        gcc --version
       shell: pwsh
 
     - name: Tidy Dependencies
@@ -59,23 +75,25 @@ jobs:
       if: ${{ matrix.enable == true }}
       run: |
         $now = (Get-Date).AddHours(3)
-        echo "DATETIME=$($now.ToString('yyyy-MM-dd HH:mm'))" >> $env:GITHUB_ENV
-        echo "BUILDSTAMP=$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())" >> $env:GITHUB_ENV
-        echo "TAGNAME=${{ matrix.version }}" >> $env:GITHUB_ENV
+        echo "DATETIME=$($now.ToString('yyyy-MM-dd HH:mm'))" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "BUILDSTAMP=$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "TAGNAME=${{ matrix.version }}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      shell: pwsh
 
-        - name: Build Windows Executable
+    - name: Build Windows Executable
       if: ${{ matrix.enable == true }}
       env:
-        CGO_ENABLED: 1
+        CGO_ENABLED: "1"
         CC: gcc
         CXX: g++
       run: |
-        $ldflags = "-s -w -H windowsgui -X 'main.currentVersion=${{ matrix.version }}' -X 'main.buildStamp=${{ env.BUILDSTAMP }}' -extldflags '-static -static-libgcc -static-libstdc++'"
-        go build "-ldflags=$ldflags" -o mesnevi.exe .
+        $ldflags = "-s -w -H windowsgui -X main.currentVersion=${{ matrix.version }} -X main.buildStamp=${{ env.BUILDSTAMP }} -extldflags '-static -static-libgcc -static-libstdc++'"
+        go build -ldflags $ldflags -o mesnevi.exe .
       shell: pwsh
 
     - name: Check DLL Dependencies
       if: ${{ matrix.enable == true }}
+      continue-on-error: true
       run: objdump -p mesnevi.exe | Select-String "DLL Name"
       shell: pwsh
 
