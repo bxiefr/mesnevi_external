@@ -1006,12 +1006,12 @@ func main() {
 	for running {
 		currentHue = math.Mod(currentHue+4.0, 360)
 
-		io := imgui.GetIO()
+		io := imgui.CurrentIO()
 		io.SetDisplaySize(imgui.Vec2{X: cachedScreenWidth, Y: cachedScreenHeight})
 
 		imgui.NewFrame()
 
-		drawList := imgui.WindowDrawList()
+		drawList := imgui.GetMainViewport().GetDrawList()
 
 		if skeletonColorIndex >= len(themeColors) {
 			skeletonColorIndex = 0
