@@ -69,7 +69,7 @@ jobs:
     - name: Pin cimgui-go version
       if: ${{ matrix.enable == true }}
       run: |
-        go get github.com/AllenDang/cimgui-go@fccd036587214a91c21c5db4f2aba18ab02ed583
+        go get github.com/AllenDang/cimgui-go@v1.6.1
         go mod tidy
         go list -m github.com/AllenDang/cimgui-go
       shell: pwsh
