@@ -159,7 +159,7 @@ const (
 )
 
 var (
-	gwlExStyle = int32(-20) // GWL_EXSTYLE
+	gwlExStyle        = int32(-20) // GWL_EXSTYLE
 	overlayHWND       windows.HWND
 	lastPassthrough   = true
 	overlayInputReady bool
