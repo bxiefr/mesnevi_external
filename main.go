@@ -21,6 +21,7 @@ import (
 	"unicode"
 	"unsafe"
 
+	"github.com/AllenDang/cimgui-go/backend/glfwbackend"
 	"github.com/AllenDang/cimgui-go/imgui"
 	"golang.org/x/sys/windows"
 )
@@ -125,19 +126,80 @@ type Config struct {
 }
 
 var (
-	cachedScreenWidth  float32
-	cachedScreenHeight float32
-	user32             = windows.NewLazySystemDLL("user32.dll")
-	getForegroundWindow  = user32.NewProc("GetForegroundWindow")
-	kernel32           = windows.NewLazySystemDLL("kernel32.dll")
-	setPriorityClass   = kernel32.NewProc("SetPriorityClass")
-	winmm              = windows.NewLazySystemDLL("winmm.dll")
-	getSystemMetrics   = user32.NewProc("GetSystemMetrics")
-	showCursor         = user32.NewProc("ShowCursor")
-	GetAsyncKeyState   = user32.NewProc("GetAsyncKeyState")
-	beepProc           = kernel32.NewProc("Beep")
-	playSoundProc      = winmm.NewProc("PlaySoundW")
+	cachedScreenWidth   float32
+	cachedScreenHeight  float32
+	user32              = windows.NewLazySystemDLL("user32.dll")
+	getForegroundWindow = user32.NewProc("GetForegroundWindow")
+	findWindowW         = user32.NewProc("FindWindowW")
+	getWindowLongW      = user32.NewProc("GetWindowLongW")
+	setWindowLongW      = user32.NewProc("SetWindowLongW")
+	setWindowPosProc    = user32.NewProc("SetWindowPos")
+	kernel32            = windows.NewLazySystemDLL("kernel32.dll")
+	setPriorityClass    = kernel32.NewProc("SetPriorityClass")
+	winmm               = windows.NewLazySystemDLL("winmm.dll")
+	getSystemMetrics    = user32.NewProc("GetSystemMetrics")
+	showCursor          = user32.NewProc("ShowCursor")
+	GetAsyncKeyState    = user32.NewProc("GetAsyncKeyState")
+	beepProc            = kernel32.NewProc("Beep")
+	playSoundProc       = winmm.NewProc("PlaySoundW")
 )
+
+// Overlay pencere ayarlari
+const overlayWindowTitle = "MESNEVI_OVERLAY"
+
+const (
+	gwlExStyle      = -20
+	wsExTransparent = 0x00000020
+	wsExLayered     = 0x00080000
+	wsExTopmost     = 0x00000008
+	swpFrameChanged = 0x0020
+	swpNoMove       = 0x0002
+	swpNoSize       = 0x0001
+	swpNoZOrder     = 0x0004
+	hwndTopmost     = 0 // HWND_TOPMOST
+)
+
+var (
+	overlayHWND       windows.HWND
+	lastPassthrough   = true
+	overlayInputReady bool
+)
+
+var themeColors = []imgui.Vec4{
+	{X: 1.0, Y: 0.55, Z: 0.47, W: 1.0},
+	{X: 0.49, Y: 1.0, Z: 0.47, W: 1.0},
+	{X: 0.48, Y: 0.47, Z: 1.0, W: 1.0},
+	{X: 0.0, Y: 0.84, Z: 1.0, W: 1.0},
+	{X: 0.5, Y: 0.0, Z: 0.5, W: 1.0},
+	{X: 1.0, Y: 1.0, Z: 0.0, W: 1.0},
+}
+
+// updateOverlayInput: menü kapalıyken tıklamalar oyuna geçer (WS_EX_TRANSPARENT),
+// menü açıkken overlay tıklamaları alır.
+func updateOverlayInput() {
+	if overlayHWND == 0 || !overlayInputReady {
+		return
+	}
+	passthrough := !menuOpen
+	if passthrough == lastPassthrough {
+		return
+	}
+	lastPassthrough = passthrough
+
+	ret, _, _ := getWindowLongW.Call(uintptr(overlayHWND), gwlExStyle)
+	style := int32(ret)
+	if passthrough {
+		style |= wsExTransparent
+	} else {
+		style &^= wsExTransparent
+	}
+	setWindowLongW.Call(uintptr(overlayHWND), gwlExStyle, uintptr(style))
+	setWindowPosProc.Call(
+		uintptr(overlayHWND), hwndTopmost,
+		0, 0, 0, 0,
+		swpNoMove|swpNoSize|swpNoZOrder|swpFrameChanged,
+	)
+}
 
 const (
 	SND_FILENAME  = 0x00020000
@@ -413,8 +475,8 @@ func worldToScreen(viewMatrix Matrix, position Vector3) (float32, float32) {
 	screenY *= invw
 	x := cachedScreenWidth / 2
 	y := cachedScreenHeight / 2
-	x += 0.5 * screenX * cachedScreenWidth + 0.5
-	y -= 0.5 * screenY * cachedScreenHeight + 0.5
+	x += 0.5*screenX*cachedScreenWidth + 0.5
+	y -= 0.5*screenY*cachedScreenHeight + 0.5
 	return x, y
 }
 
@@ -564,7 +626,7 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 		if entityPawn == 0 {
 			continue
 		}
-		
+
 		if entityPawn == localPlayerP {
 			continue
 		}
@@ -666,8 +728,8 @@ func getEntitiesInfo(procHandle windows.Handle, clientDll uintptr, screenWidth u
 				boneX, boneY := worldToScreen(viewMatrix, currentBone)
 				entityBones[boneName] = Vector2{boneX, boneY}
 			}
-		}        
-		
+		}
+
 		entityHeadTop = Vector3{entityHead.X, entityHead.Y, entityHead.Z + 7}
 		entityHeadBottom = Vector3{entityHead.X, entityHead.Y, entityHead.Z - 5}
 		screenPosHeadX, screenPosHeadTopY := worldToScreen(viewMatrix, entityHeadTop)
@@ -730,7 +792,7 @@ func drawBombTimerImGui(drawList *imgui.DrawList, procHandle windows.Handle, cli
 	ratio := float64(timeLeft) / 40.0
 	var rCol, gCol float32
 	if ratio > 0.5 {
-		rCol = float32(1.0 - ratio) * 2
+		rCol = float32(1.0-ratio) * 2
 		gCol = 1.0
 	} else {
 		rCol = 1.0
@@ -830,6 +892,17 @@ func renderEntityInfoImGui(drawList *imgui.DrawList, themeCol imgui.Vec4, rect R
 
 		drawList.AddLine(imgui.Vec2{X: rect.Right + 4, Y: armorTop}, imgui.Vec2{X: rect.Right + 4, Y: rect.Bottom}, armorCol)
 	}
+
+	textCol := imgui.ColorConvertFloat4ToU32(imgui.Vec4{X: 1, Y: 1, Z: 1, W: 1})
+
+	if nameRendering {
+		drawList.AddTextVec2(imgui.Vec2{X: rect.Left, Y: rect.Top - 14}, textCol, name)
+	}
+
+	if distanceRendering {
+		distText := strconv.FormatFloat(float64(distance), 'f', 1, 32) + "m"
+		drawList.AddTextVec2(imgui.Vec2{X: rect.Left, Y: rect.Bottom + 4}, textCol, distText)
+	}
 }
 
 func drawInGameMenu() {
@@ -839,6 +912,7 @@ func drawInGameMenu() {
 
 	currentColor := colorNames[skeletonColorIndex]
 	imgui.SetNextWindowSize(imgui.Vec2{X: 340, Y: 500})
+	imgui.SetNextWindowBgAlpha(0.88) // oyunun ustunde okunakli olsun
 	imgui.Begin("=== MESNEVI EXTERNAL v" + currentVersion + " ===")
 
 	imgui.TextColored(imgui.Vec4{X: 0.5, Y: 0.6, Z: 0.7, W: 1}, "--- ESP AYARLARI ---")
@@ -853,7 +927,7 @@ func drawInGameMenu() {
 	imgui.Checkbox("[F6] Armor Bar", &armorBarRendering)
 	imgui.Checkbox("[F7] Player Name", &nameRendering)
 	imgui.Checkbox("[F8] Distance Display", &distanceRendering)
-	
+
 	if imgui.Button("[F9] Tema: " + currentColor) {
 		skeletonColorIndex = (skeletonColorIndex + 1) % len(colorNames)
 		playBeep(true)
@@ -969,27 +1043,26 @@ func main() {
 	cachedScreenWidth = float32(screenWidth)
 	cachedScreenHeight = float32(screenHeight)
 
-	// ImGui Context Başlatma
-	imgui.CreateContext()
-	defer imgui.DestroyContext()
+	// --- GLFW + OpenGL3 overlay pencere olusturma ---
+	// Bu backend Run() icinde NewFrame/Render/SwapBuffers'in tamamini halleder.
+	backend := glfwbackend.NewGLFWBackend()
+	backend.SetWindowFlags(glfwbackend.GLFWWindowFlagsDecorated, 0)        // kenarlik/cubuk yok
+	backend.SetWindowFlags(glfwbackend.GLFWWindowFlagsResizable, 0)        // yeniden boyutlandirma kapali
+	backend.SetWindowFlags(glfwbackend.GLFWWindowFlagsFloating, 1)         // her zaman en ustte
+	backend.SetWindowFlags(glfwbackend.GLFWWindowFlagsTransparent, 1)      // seffaf framebuffer
+	backend.SetWindowFlags(glfwbackend.GLFWWindowFlagsMousePassthrough, 1) // tiklamalar oyuna gecsin
+	backend.SetWindowFlags(glfwbackend.GLFWWindowFlagsFocused, 0)          // odak calmasin
+	backend.CreateWindow(overlayWindowTitle, int(screenWidth), int(screenHeight))
+	backend.SetWindowPos(0, 0)
+	backend.SetSwapInterval(glfwbackend.GLFWSwapIntervalImmediate) // vsync kapali
+	backend.SetTargetFPS(240)
+	backend.SetBgColor(imgui.Vec4{X: 0, Y: 0, Z: 0, W: 0}) // tam seffaf temizleme
 
-    io := imgui.CurrentIO()
-    fonts := io.Fonts()
-    fonts.AddFontDefault()
-    // fonts.Build()
-	
-	// Atlas'ı manuel build edip TexIsBuilt bayrağını true yapıyoruz
-    // pixels, width, height, _ := fonts.GetTextureDataAsRGBA32()
-    // _, _, _ = pixels, width, height
-    // fonts.SetTexID(imgui.TextureID(1))
-
-	themeColors := []imgui.Vec4{
-		{X: 1.0, Y: 0.55, Z: 0.47, W: 1.0},
-		{X: 0.49, Y: 1.0, Z: 0.47, W: 1.0},
-		{X: 0.48, Y: 0.47, Z: 1.0, W: 1.0},
-		{X: 0.0, Y: 0.84, Z: 1.0, W: 1.0},
-		{X: 0.5, Y: 0.0, Z: 0.5, W: 1.0},
-		{X: 1.0, Y: 1.0, Z: 0.0, W: 1.0},
+	// Overlay HWND'ini bul (menü acikken tiklanabilir yapmak icin)
+	titlePtr, _ := windows.UTF16PtrFromString(overlayWindowTitle)
+	if hwnd, _, _ := findWindowW.Call(0, uintptr(unsafe.Pointer(titlePtr))); hwnd != 0 {
+		overlayHWND = windows.HWND(hwnd)
+		overlayInputReady = true
 	}
 
 	pid, err := findProcessId("cs2.exe")
@@ -1012,20 +1085,18 @@ func main() {
 
 	offsets := getOffsets()
 
-	running := true
-	for running {
-		currentHue = math.Mod(currentHue+4.0, 360)
-
-		io.SetDisplaySize(imgui.Vec2{X: cachedScreenWidth, Y: cachedScreenHeight})
-
-		imgui.NewFrame()
-
-		drawList := imgui.WindowDrawList()
+	// Ana döngü: backend her frame NewFrame -> loop -> Render -> SwapBuffers yapar.
+	// Biz sadece cizim kodu yaziyoruz; imgui.NewFrame()/Render() CAGIRMAYIN.
+	backend.Run(func() {
+		updateOverlayInput()
 
 		if skeletonColorIndex >= len(themeColors) {
 			skeletonColorIndex = 0
 		}
 		activeThemeCol := themeColors[skeletonColorIndex]
+
+		// ESP cizimleri foreground draw list'e (normal pencerelerin ustunde)
+		drawList := imgui.ForegroundDrawListViewportPtr()
 
 		entities := getEntitiesInfo(procHandle, clientDll, screenWidth, screenHeight, offsets)
 		for _, entity := range entities {
@@ -1044,9 +1115,5 @@ func main() {
 
 		drawBombTimerImGui(drawList, procHandle, clientDll, screenWidth, screenHeight, offsets)
 		drawInGameMenu()
-
-		imgui.Render()
-
-		time.Sleep(time.Millisecond * 2)
-	}
+	})
 }
