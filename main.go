@@ -148,7 +148,6 @@ var (
 const overlayWindowTitle = "MESNEVI_OVERLAY"
 
 const (
-	gwlExStyle      = -20
 	wsExTransparent = 0x00000020
 	wsExLayered     = 0x00080000
 	wsExTopmost     = 0x00000008
@@ -156,10 +155,11 @@ const (
 	swpNoMove       = 0x0002
 	swpNoSize       = 0x0001
 	swpNoZOrder     = 0x0004
-	hwndTopmost     = 0 // HWND_TOPMOST
+	hwndTopmost     = ^uintptr(0) // HWND_TOPMOST (-1)
 )
 
 var (
+	gwlExStyle = int32(-20) // GWL_EXSTYLE
 	overlayHWND       windows.HWND
 	lastPassthrough   = true
 	overlayInputReady bool
@@ -186,15 +186,15 @@ func updateOverlayInput() {
 	}
 	lastPassthrough = passthrough
 
-	ret, _, _ := getWindowLongW.Call(uintptr(overlayHWND), gwlExStyle)
-	style := int32(ret)
+	ret, _, _ := getWindowLongW.Call(uintptr(overlayHWND), uintptr(gwlExStyleIdx))
+    style := int32(ret)
 	if passthrough {
 		style |= wsExTransparent
 	} else {
 		style &^= wsExTransparent
 	}
-	setWindowLongW.Call(uintptr(overlayHWND), gwlExStyle, uintptr(style))
-	setWindowPosProc.Call(
+	setWindowLongW.Call(uintptr(overlayHWND), uintptr(gwlExStyle), uintptr(uint32(style)))
+    setWindowPosProc.Call(
 		uintptr(overlayHWND), hwndTopmost,
 		0, 0, 0, 0,
 		swpNoMove|swpNoSize|swpNoZOrder|swpFrameChanged,
