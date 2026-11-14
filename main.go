@@ -186,7 +186,7 @@ func updateOverlayInput() {
 	}
 	lastPassthrough = passthrough
 
-	ret, _, _ := getWindowLongW.Call(uintptr(overlayHWND), uintptr(gwlExStyleIdx))
+	ret, _, _ := getWindowLongW.Call(uintptr(overlayHWND), uintptr(gwlExStyle))
     style := int32(ret)
 	if passthrough {
 		style |= wsExTransparent
