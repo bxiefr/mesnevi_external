@@ -1056,7 +1056,7 @@ func main() {
 	backend.SetWindowPos(0, 0)
 	// backend.SetSwapInterval(glfwbackend.GLFWSwapIntervalImmediate) // vsync kapali
 	backend.SetTargetFPS(240)
-	backend.SetBgColor(imgui.Vec4{X: 0, Y: 0, Z: 0, W: 0}) // tam seffaf temizleme
+	backend.SetBgColor(imgui.Vec4{X: 0, Y: 0, Z: 0.5, W: 1})
 
 	// Overlay HWND'ini bul (menü acikken tiklanabilir yapmak icin)
 	titlePtr, _ := windows.UTF16PtrFromString(overlayWindowTitle)
