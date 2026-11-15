@@ -912,7 +912,7 @@ func drawInGameMenu() {
 
 	currentColor := colorNames[skeletonColorIndex]
 	imgui.SetNextWindowSize(imgui.Vec2{X: 340, Y: 500})
-	imgui.SetNextWindowBgAlpha(0.88) // oyunun ustunde okunakli olsun
+	imgui.SetNextWindowBgAlpha(0) // oyunun ustunde okunakli olsun
 	imgui.Begin("=== MESNEVI EXTERNAL v" + currentVersion + " ===")
 
 	imgui.TextColored(imgui.Vec4{X: 0.5, Y: 0.6, Z: 0.7, W: 1}, "--- ESP AYARLARI ---")
@@ -1049,14 +1049,14 @@ func main() {
 	backend.SetWindowFlags(glfwbackend.GLFWWindowFlagsDecorated, 0)        // kenarlik/cubuk yok
 	backend.SetWindowFlags(glfwbackend.GLFWWindowFlagsResizable, 0)        // yeniden boyutlandirma kapali
 	backend.SetWindowFlags(glfwbackend.GLFWWindowFlagsFloating, 1)         // her zaman en ustte
-	backend.SetWindowFlags(glfwbackend.GLFWWindowFlagsTransparent, 0)      // seffaf framebuffer
+	backend.SetWindowFlags(glfwbackend.GLFWWindowFlagsTransparent, 1)      // seffaf framebuffer
 	backend.SetWindowFlags(glfwbackend.GLFWWindowFlagsMousePassthrough, 1) // tiklamalar oyuna gecsin
 	backend.SetWindowFlags(glfwbackend.GLFWWindowFlagsFocused, 0)          // odak calmasin
 	backend.CreateWindow(overlayWindowTitle, int(screenWidth), int(screenHeight)-1)
 	backend.SetWindowPos(0, 0)
 	// backend.SetSwapInterval(glfwbackend.GLFWSwapIntervalImmediate) // vsync kapali
 	backend.SetTargetFPS(240)
-	backend.SetBgColor(imgui.Vec4{X: 0, Y: 0, Z: 0.5, W: 1})
+	backend.SetBgColor(imgui.Vec4{X: 0, Y: 0, Z: 0, W: 0})
 
 	// Overlay HWND'ini bul (menü acikken tiklanabilir yapmak icin)
 	titlePtr, _ := windows.UTF16PtrFromString(overlayWindowTitle)
