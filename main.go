@@ -912,7 +912,7 @@ func drawInGameMenu() {
 
 	currentColor := colorNames[skeletonColorIndex]
 	imgui.SetNextWindowSize(imgui.Vec2{X: 340, Y: 500})
-	imgui.SetNextWindowBgAlpha(0) // oyunun ustunde okunakli olsun
+	imgui.SetNextWindowBgAlpha(0.88) // oyunun ustunde okunakli olsun
 	imgui.Begin("=== MESNEVI EXTERNAL v" + currentVersion + " ===")
 
 	imgui.TextColored(imgui.Vec4{X: 0.5, Y: 0.6, Z: 0.7, W: 1}, "--- ESP AYARLARI ---")
