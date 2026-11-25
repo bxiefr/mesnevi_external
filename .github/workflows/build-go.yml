@@ -1,4 +1,4 @@
-name: Build v1.8.9
+name: Build MESNEVI
 
 on:
   workflow_dispatch:
@@ -27,18 +27,6 @@ jobs:
       with:
         go-version-file: go.mod
         cache: true
-
-    - name: Setup MSYS2 (MinGW GCC)
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW64
-        release: false
-        update: false
-        install: mingw-w64-x86_64-gcc
-
-    - name: Add MinGW to PATH
-      run: echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      shell: pwsh
 
     - name: Verify Go and GCC
       run: |
