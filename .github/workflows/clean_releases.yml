@@ -1,0 +1,65 @@
+name: Cleanup Old Releases and Tags
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Sadece listele, silme (denemek için işaretli bırak)'
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      DRY_RUN: ${{ inputs.dry_run }}
+
+    steps:
+    - name: Find newest release
+      run: |
+        KEEP_TAG=$(gh release list --limit 1000 --json tagName,createdAt \
+          --jq 'sort_by(.createdAt) | reverse | .[0].tagName')
+
+        if [ -z "$KEEP_TAG" ] || [ "$KEEP_TAG" = "null" ]; then
+          echo "Hiç release bulunamadı, işlem iptal."
+          exit 1
+        fi
+
+        echo "KEEP_TAG=$KEEP_TAG" >> "$GITHUB_ENV"
+        echo "Bırakılacak release/tag: $KEEP_TAG"
+
+    - name: Delete old releases
+      run: |
+        gh release list --limit 1000 --json tagName --jq '.[].tagName' | while read -r tag; do
+          if [ "$tag" = "$KEEP_TAG" ]; then
+            echo "ATLA (en yeni): $tag"
+            continue
+          fi
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "[DRY RUN] Release silinecek: $tag"
+          else
+            echo "Release siliniyor: $tag"
+            gh release delete "$tag" --yes --cleanup-tag || true
+          fi
+        done
+
+    - name: Delete leftover tags
+      run: |
+        gh api --paginate "repos/$GH_REPO/git/matching-refs/tags" --jq '.[].ref' | sed 's|^refs/tags/||' | while read -r tag; do
+          if [ "$tag" = "$KEEP_TAG" ]; then
+            echo "ATLA (en yeni): $tag"
+            continue
+          fi
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "[DRY RUN] Tag silinecek: $tag"
+          else
+            echo "Tag siliniyor: $tag"
+            gh api -X DELETE "repos/$GH_REPO/git/refs/tags/$tag" || true
+          fi
+        done
