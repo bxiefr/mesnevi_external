@@ -1,52 +1,34 @@
-name: Build All Branches
+name: Build v1.8.9
 
 on:
   workflow_dispatch:
-    inputs:
-      build_v189:
-        description: 'v1.8.9 branchini build et'
-        required: true
-        type: boolean
-        default: true
-      build_v190:
-        description: 'v1.9.0 branchini build et'
-        required: true
-        type: boolean
-        default: true
-
   push:
     branches: [ "cli" ]
 
 permissions:
   contents: write
 
+env:
+  TARGET_BRANCH: "v1.8.9"
+  VERSION: "1.8.9"
+
 jobs:
-  build-matrix:
+  build:
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target_branch: "v1.8.9"
-            version: "1.8.9"
-            enable: ${{ inputs.build_v189 == true || github.event_name == 'push' }}
-          - target_branch: "v1.9.0"
-            version: "1.9.0"
-            enable: ${{ inputs.build_v190 == true || github.event_name == 'push' }}
 
     steps:
-    - name: Check if branch is enabled
-      if: ${{ matrix.enable == false }}
-      run: echo "Bu branch seçilmedi, atlanıyor..."
+    - name: Checkout v1.8.9
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ env.TARGET_BRANCH }}
 
-    - name: Clone and Checkout Branch
-      if: ${{ matrix.enable == true }}
-      run: |
-        git clone --branch ${{ matrix.target_branch }} https://github.com/${{ github.repository }}.git .
-      shell: pwsh
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+        cache: true
 
     - name: Setup MSYS2 (MinGW GCC)
-      if: ${{ matrix.enable == true }}
       uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
@@ -55,73 +37,61 @@ jobs:
         install: mingw-w64-x86_64-gcc
 
     - name: Add MinGW to PATH
-      if: ${{ matrix.enable == true }}
       run: echo "C:\msys64\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       shell: pwsh
 
     - name: Verify Go and GCC
-      if: ${{ matrix.enable == true }}
       run: |
         go version
         gcc --version
       shell: pwsh
 
-    - name: Pin cimgui-go version
-      if: ${{ matrix.enable == true }}
-      run: |
-        go get github.com/AllenDang/cimgui-go@v1.6.1
-        go mod tidy
-        go list -m github.com/AllenDang/cimgui-go
+    - name: Update dependencies
+      run: go mod tidy
       shell: pwsh
 
     - name: Set Environment Info
-      if: ${{ matrix.enable == true }}
       run: |
         $now = (Get-Date).AddHours(3)
         echo "DATETIME=$($now.ToString('yyyy-MM-dd HH:mm'))" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         echo "BUILDSTAMP=$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        echo "TAGNAME=${{ matrix.version }}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       shell: pwsh
 
     - name: Build Windows Executable
-      if: ${{ matrix.enable == true }}
       env:
         CGO_ENABLED: "1"
         CC: gcc
         CXX: g++
       run: |
-        $ldflags = "-s -w -X main.currentVersion=${{ matrix.version }} -X main.buildStamp=${{ env.BUILDSTAMP }} -extldflags '-static-libgcc -static-libstdc++ -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic'"
+        $ldflags = "-s -w -X main.currentVersion=${{ env.VERSION }} -X main.buildStamp=${{ env.BUILDSTAMP }} -extldflags '-static-libgcc -static-libstdc++ -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic'"
         go build -ldflags $ldflags -o mesnevi.exe .
       shell: pwsh
 
     - name: Check DLL Dependencies
-      if: ${{ matrix.enable == true }}
       continue-on-error: true
       run: objdump -p mesnevi.exe | Select-String "DLL Name"
       shell: pwsh
 
     - name: Prepare Release Folder
-      if: ${{ matrix.enable == true }}
       run: |
         mkdir release_folder
         copy mesnevi.exe release_folder\
       shell: pwsh
 
     - name: Create GitHub Release
-      if: ${{ matrix.enable == true }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         $releaseBody = @"
         ### Build Details
         - **Build Time:** ${{ env.DATETIME }}
-        - **Source Branch:** ${{ matrix.target_branch }}
+        - **Source Branch:** ${{ env.TARGET_BRANCH }}
         - BuildStamp: ${{ env.BUILDSTAMP }}
         "@
 
-        gh release delete "${{ env.TAGNAME }}" --yes 2>$null
-        git push origin --delete "${{ env.TAGNAME }}" 2>$null
+        gh release delete "${{ env.VERSION }}" --yes 2>$null
+        git push origin --delete "${{ env.VERSION }}" 2>$null
         $global:LASTEXITCODE = 0
 
-        gh release create "${{ env.TAGNAME }}" --title "Release v${{ env.TAGNAME }} (${{ matrix.target_branch }})" --notes "$releaseBody" release_folder/mesnevi.exe
+        gh release create "${{ env.VERSION }}" --title "Release v${{ env.VERSION }} (${{ env.TARGET_BRANCH }})" --notes "$releaseBody" release_folder/mesnevi.exe
       shell: pwsh
