@@ -1046,14 +1046,6 @@ func drawInGameMenu(hdc win.HDC) {
 	textOutProc.Call(uintptr(hdc), 50, uintptr(startY+5), uintptr(unsafe.Pointer(&footerUTF16[0])), uintptr(len(footerUTF16)-1))
 }
 
-		isColorStatus := false
-		for _, cName := range colorNames {
-			if item.status == "["+cName+"]" {
-				isColorStatus = true
-				break
-			}
-		}
-
 		// Durum renkleri
 		if item.label == "[F11] Config Kaydet" {
 			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 200, 255))) // Mavi
