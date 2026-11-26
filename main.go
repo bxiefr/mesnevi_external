@@ -1046,19 +1046,6 @@ func drawInGameMenu(hdc win.HDC) {
 	textOutProc.Call(uintptr(hdc), 50, uintptr(startY+5), uintptr(unsafe.Pointer(&footerUTF16[0])), uintptr(len(footerUTF16)-1))
 }
 
-		// Durum renkleri
-		if item.label == "[F11] Config Kaydet" {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 200, 255))) // Mavi
-		} else if item.label == "[DELETE] Panic Button" {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 70, 70))) // Kırmızı
-		} else if item.active && (item.status == "[ AÇIK ]" || isColorStatus) {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 255, 120))) // Neon Yeşil
-		} else if item.status == "[ KAPALI ]" {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(240, 60, 60))) // Soft Kırmızı
-		} else {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 200, 0))) // Sarı
-		}
-
 		// Sağ tarafa hizalanmış statü yazısı
 		statusPtr, _ := windows.UTF16PtrFromString(item.status)
 		textOutProc.Call(uintptr(hdc), 250, uintptr(startY), uintptr(unsafe.Pointer(statusPtr)), uintptr(len(item.status)))
