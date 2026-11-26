@@ -951,24 +951,23 @@ func drawInGameMenu(hdc win.HDC) {
 		return
 	}
 
+	// Önceki çizimlerden (ESP/Name/Distance) kalan TextAlign modunu sıfırla
+	setTextAlign.Call(uintptr(hdc), 0)
 	setBkMode.Call(uintptr(hdc), 1)
 
-	// Daha modern ve tok bir koyu arkaplan rengi (0x0b0d12)
 	menuBrush, _, _ := createSolidBrush.Call(uintptr(0x0b0d12))
 	r, g, b := hsvToRGB(currentHue, 1.0, 1.0)
 	rgbColorRef := uintptr(r) | (uintptr(g) << 8) | (uintptr(b) << 16)
 	menuBorderPen, _, _ := createPen.Call(win.PS_SOLID, 2, rgbColorRef)
-	
+
 	selectObject.Call(uintptr(hdc), menuBrush)
 	selectObject.Call(uintptr(hdc), menuBorderPen)
 
-	// Menü kutusu boyutları (Genişlik: 30, 370 | Yükseklik: 30, 520)
 	rectangleProc.Call(uintptr(hdc), 30, 30, 370, 520)
 
 	deleteObject.Call(menuBrush)
 	deleteObject.Call(menuBorderPen)
 
-	// Başlık
 	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 255, 255)))
 	title := fmt.Sprintf("=== MESNEVI EXTERNAL v%s ===", currentVersion)
 	titleUTF16, _ := windows.UTF16FromString(title)
@@ -976,7 +975,6 @@ func drawInGameMenu(hdc win.HDC) {
 
 	currentColor := colorNames[skeletonColorIndex]
 
-	// Kategorize edilmiş menü öğeleri (label, status, active, isHeader)
 	items := []struct {
 		label    string
 		status   string
@@ -988,7 +986,7 @@ func drawInGameMenu(hdc win.HDC) {
 		{"[F2] Skeleton ESP", getStatusText(skeletonRendering), skeletonRendering, false},
 		{"[F3] Head Circle", getStatusText(headCircle), headCircle, false},
 		{"[F4] Team Check", getStatusText(teamCheck), teamCheck, false},
-		
+
 		{"--- GÖRSEL & BİLGİ ---", "", false, true},
 		{"[F5] Health Bar", getStatusText(healthBarRendering), healthBarRendering, false},
 		{"[F9] Armor Bar", getStatusText(armorBarRendering), armorBarRendering, false},
@@ -1006,18 +1004,47 @@ func drawInGameMenu(hdc win.HDC) {
 	startY := int32(75)
 	for _, item := range items {
 		if item.isHeader {
-			// Kategori başlıkları için şık turuncu/gri ton
 			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(140, 150, 170)))
-			headerPtr, _ := windows.UTF16PtrFromString(item.label)
-			textOutProc.Call(uintptr(hdc), 45, uintptr(startY), uintptr(unsafe.Pointer(headerPtr)), uintptr(len(item.label)))
+			headerUTF16, _ := windows.UTF16FromString(item.label)
+			textOutProc.Call(uintptr(hdc), 45, uintptr(startY), uintptr(unsafe.Pointer(&headerUTF16[0])), uintptr(len(headerUTF16)-1))
 			startY += 22
 			continue
 		}
 
-		// Özellik adı
 		setTextColor.Call(uintptr(hdc), uintptr(win.RGB(210, 215, 225)))
-		labelPtr, _ := windows.UTF16PtrFromString(item.label)
-		textOutProc.Call(uintptr(hdc), 55, uintptr(startY), uintptr(unsafe.Pointer(labelPtr)), uintptr(len(item.label)))
+		labelUTF16, _ := windows.UTF16FromString(item.label)
+		textOutProc.Call(uintptr(hdc), 55, uintptr(startY), uintptr(unsafe.Pointer(&labelUTF16[0])), uintptr(len(labelUTF16)-1))
+
+		isColorStatus := false
+		for _, cName := range colorNames {
+			if item.status == "["+cName+"]" {
+				isColorStatus = true
+				break
+			}
+		}
+
+		if item.label == "[F11] Config Kaydet" {
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 200, 255)))
+		} else if item.label == "[DELETE] Panic Button" {
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 70, 70)))
+		} else if item.active && (item.status == "[ AÇIK ]" || isColorStatus) {
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 255, 120)))
+		} else if item.status == "[ KAPALI ]" {
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(240, 60, 60)))
+		} else {
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 200, 0)))
+		}
+
+		statusUTF16, _ := windows.UTF16FromString(item.status)
+		textOutProc.Call(uintptr(hdc), 250, uintptr(startY), uintptr(unsafe.Pointer(&statusUTF16[0])), uintptr(len(statusUTF16)-1))
+
+		startY += 23
+	}
+
+	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(110, 120, 140)))
+	footerUTF16, _ := windows.UTF16FromString("[INSERT] Menuyu Gizle / Goster")
+	textOutProc.Call(uintptr(hdc), 50, uintptr(startY+5), uintptr(unsafe.Pointer(&footerUTF16[0])), uintptr(len(footerUTF16)-1))
+}
 
 		isColorStatus := false
 		for _, cName := range colorNames {
