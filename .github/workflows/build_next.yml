@@ -1,0 +1,85 @@
+name: Build MESNEVI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "cli" ]
+
+permissions:
+  contents: write
+
+env:
+  TARGET_BRANCH: "v1.9.0"
+  VERSION: "1.9.0"
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ env.TARGET_BRANCH }}
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+        cache: true
+
+    - name: Verify Go and GCC
+      run: |
+        go version
+        gcc --version
+      shell: pwsh
+
+    - name: Update dependencies
+      run: go mod tidy
+      shell: pwsh
+
+    - name: Set Environment Info
+      run: |
+        $now = (Get-Date).AddHours(3)
+        echo "DATETIME=$($now.ToString('yyyy-MM-dd HH:mm'))" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "BUILDSTAMP=$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      shell: pwsh
+
+    - name: Build Windows Executable
+      env:
+        CGO_ENABLED: "1"
+        CC: gcc
+        CXX: g++
+      run: |
+        $ldflags = "-s -w -X main.currentVersion=${{ env.VERSION }} -X main.buildStamp=${{ env.BUILDSTAMP }} -extldflags '-static-libgcc -static-libstdc++ -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic'"
+        go build -ldflags $ldflags -o mesnevi.exe .
+      shell: pwsh
+
+    - name: Check DLL Dependencies
+      continue-on-error: true
+      run: objdump -p mesnevi.exe | Select-String "DLL Name"
+      shell: pwsh
+
+    - name: Prepare Release Folder
+      run: |
+        mkdir release_folder
+        copy mesnevi.exe release_folder\
+      shell: pwsh
+
+    - name: Create GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        $releaseBody = @"
+        ### Build Details
+        - **Build Time:** ${{ env.DATETIME }}
+        - **Source Branch:** ${{ env.TARGET_BRANCH }}
+        - BuildStamp: ${{ env.BUILDSTAMP }}
+        "@
+
+        gh release delete "${{ env.VERSION }}" --yes 2>$null
+        git push origin --delete "${{ env.VERSION }}" 2>$null
+        $global:LASTEXITCODE = 0
+
+        gh release create "${{ env.VERSION }}" --title "Release v${{ env.VERSION }} (${{ env.TARGET_BRANCH }})" --notes "$releaseBody" release_folder/mesnevi.exe
+      shell: pwsh
