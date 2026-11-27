@@ -1,4 +1,4 @@
-name: Build MESNEVI
+name: Build MESNEVI next
 
 on:
   workflow_dispatch:
