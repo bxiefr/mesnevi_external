@@ -1015,7 +1015,6 @@ func drawInGameMenu(hdc win.HDC) {
 		return
 	}
 
-	// Önceki çizimlerden (ESP/Name/Distance) kalan TextAlign modunu sıfırla
 	setTextAlign.Call(uintptr(hdc), 0)
 	setBkMode.Call(uintptr(hdc), 1)
 
@@ -1027,7 +1026,7 @@ func drawInGameMenu(hdc win.HDC) {
 	selectObject.Call(uintptr(hdc), menuBrush)
 	selectObject.Call(uintptr(hdc), menuBorderPen)
 
-	rectangleProc.Call(uintptr(hdc), 30, 30, 370, 520)
+	rectangleProc.Call(uintptr(hdc), 30, 30, 380, 575)
 
 	deleteObject.Call(menuBrush)
 	deleteObject.Call(menuBorderPen)
@@ -1037,32 +1036,64 @@ func drawInGameMenu(hdc win.HDC) {
 	titleUTF16, _ := windows.UTF16FromString(title)
 	textOutProc.Call(uintptr(hdc), 50, 45, uintptr(unsafe.Pointer(&titleUTF16[0])), uintptr(len(titleUTF16)-1))
 
-	currentColor := colorNames[skeletonColorIndex]
+	currentColor := getCurrentColorName()
+	isEN := menuLang == "en"
 
-	items := []struct {
+	type menuItem struct {
 		label    string
 		status   string
 		active   bool
 		isHeader bool
-	}{
-		{"--- ESP AYARLARI ---", "", false, true},
-		{"[F1] Box ESP", getStatusText(boxRendering), boxRendering, false},
-		{"[F2] Skeleton ESP", getStatusText(skeletonRendering), skeletonRendering, false},
-		{"[F3] Head Circle", getStatusText(headCircle), headCircle, false},
-		{"[F4] Team Check", getStatusText(teamCheck), teamCheck, false},
+		tag      string
+	}
 
-		{"--- GÖRSEL & BİLGİ ---", "", false, true},
-		{"[F5] Health Bar", getStatusText(healthBarRendering), healthBarRendering, false},
-		{"[F9] Armor Bar", getStatusText(armorBarRendering), armorBarRendering, false},
-		{"[F6] Player Name", getStatusText(nameRendering), nameRendering, false},
-		{"[F7] Distance Display", getStatusText(distanceRendering), distanceRendering, false},
-		{"[F10] Hitmarker & Sound", getStatusText(hitmarkerRendering), hitmarkerRendering, false},
-		{"[F12] Bomb Timer", getStatusText(bombTimerRendering), bombTimerRendering, false},
-		{"[F8] ESP Tema Rengi", "[" + currentColor + "]", true, false},
+	var items []menuItem
+	if isEN {
+		items = []menuItem{
+			{"--- ESP SETTINGS ---", "", false, true, ""},
+			{"[F1] Box ESP", getStatusLabel(boxRendering), boxRendering, false, "toggle"},
+			{"[F2] Skeleton ESP", getStatusLabel(skeletonRendering), skeletonRendering, false, "toggle"},
+			{"[F3] Head Circle", getStatusLabel(headCircle), headCircle, false, "toggle"},
+			{"[F4] Team Check", getStatusLabel(teamCheck), teamCheck, false, "toggle"},
 
-		{"--- SİSTEM & KONTROL ---", "", false, true},
-		{"[F11] Config Kaydet", "[ KAYDET ]", true, false},
-		{"[DELETE] Panic Button", "[ ÇIKIŞ ]", true, false},
+			{"--- VISUAL & INFO ---", "", false, true, ""},
+			{"[F5] Health Bar", getStatusLabel(healthBarRendering), healthBarRendering, false, "toggle"},
+			{"[F9] Armor Bar", getStatusLabel(armorBarRendering), armorBarRendering, false, "toggle"},
+			{"[F6] Player Name", getStatusLabel(nameRendering), nameRendering, false, "toggle"},
+			{"[F7] Distance Display", getStatusLabel(distanceRendering), distanceRendering, false, "toggle"},
+			{"[F10] Hitmarker & Sound", getStatusLabel(hitmarkerRendering), hitmarkerRendering, false, "toggle"},
+			{"[F12] Bomb Timer", getStatusLabel(bombTimerRendering), bombTimerRendering, false, "toggle"},
+			{"[F8] ESP Theme Color", "[" + currentColor + "]", true, false, "color"},
+
+			{"--- SYSTEM & CONTROLS ---", "", false, true, ""},
+			{"[HOME] Menu Language", "[ EN ]", true, false, "lang"},
+			{"[PGUP] Reset Default", "[ RESET ]", true, false, "reset"},
+			{"[F11] Save Config", "[ SAVE ]", true, false, "save"},
+			{"[DELETE] Panic Button", "[ EXIT ]", true, false, "panic"},
+		}
+	} else {
+		items = []menuItem{
+			{"--- ESP AYARLARI ---", "", false, true, ""},
+			{"[F1] Box ESP", getStatusLabel(boxRendering), boxRendering, false, "toggle"},
+			{"[F2] Skeleton ESP", getStatusLabel(skeletonRendering), skeletonRendering, false, "toggle"},
+			{"[F3] Head Circle", getStatusLabel(headCircle), headCircle, false, "toggle"},
+			{"[F4] Team Check", getStatusLabel(teamCheck), teamCheck, false, "toggle"},
+
+			{"--- GÖRSEL & BİLGİ ---", "", false, true, ""},
+			{"[F5] Health Bar", getStatusLabel(healthBarRendering), healthBarRendering, false, "toggle"},
+			{"[F9] Armor Bar", getStatusLabel(armorBarRendering), armorBarRendering, false, "toggle"},
+			{"[F6] Player Name", getStatusLabel(nameRendering), nameRendering, false, "toggle"},
+			{"[F7] Distance Display", getStatusLabel(distanceRendering), distanceRendering, false, "toggle"},
+			{"[F10] Hitmarker & Sound", getStatusLabel(hitmarkerRendering), hitmarkerRendering, false, "toggle"},
+			{"[F12] Bomb Timer", getStatusLabel(bombTimerRendering), bombTimerRendering, false, "toggle"},
+			{"[F8] ESP Tema Rengi", "[" + currentColor + "]", true, false, "color"},
+
+			{"--- SİSTEM & KONTROL ---", "", false, true, ""},
+			{"[HOME] Menü Dili", "[ TR ]", true, false, "lang"},
+			{"[PGUP] Varsayılana Dön", "[ SIFIRLA ]", true, false, "reset"},
+			{"[F11] Config Kaydet", "[ KAYDET ]", true, false, "save"},
+			{"[DELETE] Panic Button", "[ ÇIKIŞ ]", true, false, "panic"},
+		}
 	}
 
 	startY := int32(75)
@@ -1079,34 +1110,35 @@ func drawInGameMenu(hdc win.HDC) {
 		labelUTF16, _ := windows.UTF16FromString(item.label)
 		textOutProc.Call(uintptr(hdc), 55, uintptr(startY), uintptr(unsafe.Pointer(&labelUTF16[0])), uintptr(len(labelUTF16)-1))
 
-		isColorStatus := false
-		for _, cName := range colorNames {
-			if item.status == "["+cName+"]" {
-				isColorStatus = true
-				break
+		switch item.tag {
+		case "save", "lang":
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 200, 255)))
+		case "reset":
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 190, 0)))
+		case "panic":
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 70, 70)))
+		case "color":
+			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 255, 120)))
+		default:
+			if item.active {
+				setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 255, 120)))
+			} else {
+				setTextColor.Call(uintptr(hdc), uintptr(win.RGB(240, 60, 60)))
 			}
 		}
 
-		if item.label == "[F11] Config Kaydet" {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 200, 255)))
-		} else if item.label == "[DELETE] Panic Button" {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 70, 70)))
-		} else if item.active && (item.status == "[ AÇIK ]" || isColorStatus) {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(0, 255, 120)))
-		} else if item.status == "[ KAPALI ]" {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(240, 60, 60)))
-		} else {
-			setTextColor.Call(uintptr(hdc), uintptr(win.RGB(255, 200, 0)))
-		}
-
 		statusUTF16, _ := windows.UTF16FromString(item.status)
-		textOutProc.Call(uintptr(hdc), 250, uintptr(startY), uintptr(unsafe.Pointer(&statusUTF16[0])), uintptr(len(statusUTF16)-1))
+		textOutProc.Call(uintptr(hdc), 260, uintptr(startY), uintptr(unsafe.Pointer(&statusUTF16[0])), uintptr(len(statusUTF16)-1))
 
 		startY += 23
 	}
 
 	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(110, 120, 140)))
-	footerUTF16, _ := windows.UTF16FromString("[INSERT] Menuyu Gizle / Goster")
+	footer := "[INSERT] Menuyu Gizle / Goster"
+	if isEN {
+		footer = "[INSERT] Hide / Show Menu"
+	}
+	footerUTF16, _ := windows.UTF16FromString(footer)
 	textOutProc.Call(uintptr(hdc), 50, uintptr(startY+5), uintptr(unsafe.Pointer(&footerUTF16[0])), uintptr(len(footerUTF16)-1))
 }
 
