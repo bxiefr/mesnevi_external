@@ -1242,11 +1242,6 @@ func listenHotkeys() {
 			menuOpen = !menuOpen
 			playBeep(menuOpen)
 		}
-		if isKeyPressed(0x77) { // F8 -> ESP Tema Rengi Değiştir
-			skeletonColorIndex = (skeletonColorIndex + 1) % len(colorNames)
-			skeletonColor = themePens[skeletonColorIndex]
-			playBeep(true)
-		}
 		if isKeyPressed(0x70) { // F1 -> Box ESP
 			boxRendering = !boxRendering
 			playBeep(boxRendering)
@@ -1275,6 +1270,11 @@ func listenHotkeys() {
 			distanceRendering = !distanceRendering
 			playBeep(distanceRendering)
 		}
+		if isKeyPressed(0x77) { // F8 -> ESP Tema Rengi Değiştir
+			skeletonColorIndex = (skeletonColorIndex + 1) % len(themePens)
+			skeletonColor = themePens[skeletonColorIndex]
+			playBeep(true)
+		}
 		if isKeyPressed(0x78) { // F9 -> Armor Bar
 			armorBarRendering = !armorBarRendering
 			playBeep(armorBarRendering)
@@ -1295,6 +1295,14 @@ func listenHotkeys() {
 		if isKeyPressed(0x2E) { // VK_DELETE -> PANIC BUTTON
 			playBeep(false)
 			os.Exit(0)
+		}
+		if isKeyPressed(0x24) { // HOME -> Menü Dili Değiştir (TR/EN)
+			toggleMenuLang()
+			playBeep(true)
+		}
+		if isKeyPressed(0x21) { // PGUP -> Varsayılana Dön
+			resetToDefault(true)
+			playBeep(true)
 		}
 		if isKeyPressed(0x23) { // END -> Normal Çıkış
 			playBeep(false)
