@@ -123,9 +123,13 @@ type Config struct {
 	HitSoundRendering   bool `json:"hitSoundRendering"`
 	BombTimerRendering  bool `json:"bombTimerRendering"`
 	SkeletonColorIndex  int  `json:"skeletonColorIndex"`
+    MenuLang            string `json:"menuLang"`
 }
 
 var (
+	menuLang                   string = "tr" // "tr" veya "en"
+	colorNamesTR               = []string{"MAVİ", "YEŞİL", "KIRMIZI", "SARI", "MOR", "TURKUAZ"}
+	colorNamesEN               = []string{"BLUE", "GREEN", "RED", "YELLOW", "PURPLE", "CYAN"}
 	cachedScreenWidth          float32
 	cachedScreenHeight         float32
 	user32                     = windows.NewLazySystemDLL("user32.dll")
@@ -375,7 +379,67 @@ func loadConfig() {
 		hitSoundRendering = cfg.HitSoundRendering
 		bombTimerRendering = cfg.BombTimerRendering
 		skeletonColorIndex = cfg.SkeletonColorIndex
+		if cfg.MenuLang == "tr" || cfg.MenuLang == "en" {
+			menuLang = cfg.MenuLang
+			}
 	}
+}
+
+func resetToDefault(persist bool) {
+	teamCheck = true
+	headCircle = true
+	skeletonRendering = true
+	boxRendering = true
+	nameRendering = true
+	healthBarRendering = true
+	armorBarRendering = true
+	healthTextRendering = true
+	distanceRendering = true
+	hitmarkerRendering = true
+	hitSoundRendering = true
+	bombTimerRendering = true
+	skeletonColorIndex = 0
+	if len(themePens) > 0 {
+		skeletonColor = themePens[0]
+	}
+	if menuLang != "tr" && menuLang != "en" {
+		menuLang = "tr"
+	}
+	if persist {
+		saveConfig()
+	}
+}
+
+func toggleMenuLang() {
+	if menuLang == "en" {
+		menuLang = "tr"
+	} else {
+		menuLang = "en"
+	}
+}
+
+func getCurrentColorName() string {
+	list := colorNamesTR
+	if menuLang == "en" {
+		list = colorNamesEN
+	}
+	if skeletonColorIndex < 0 || skeletonColorIndex >= len(list) {
+		return list[0]
+	}
+	return list[skeletonColorIndex]
+}
+
+func getStatusLabel(active bool) string {
+	if menuLang == "en" {
+		if active {
+			return "[ ON ]"
+		}
+		return "[ OFF ]"
+	}
+	if active {
+		return "[ AÇIK ]"
+	}
+	return "[ KAPALI ]"
 }
 
 func extractEmbeddedHitSound() string {
