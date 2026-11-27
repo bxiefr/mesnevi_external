@@ -1046,19 +1046,6 @@ func drawInGameMenu(hdc win.HDC) {
 	textOutProc.Call(uintptr(hdc), 50, uintptr(startY+5), uintptr(unsafe.Pointer(&footerUTF16[0])), uintptr(len(footerUTF16)-1))
 }
 
-		// Sağ tarafa hizalanmış statü yazısı
-		statusPtr, _ := windows.UTF16PtrFromString(item.status)
-		textOutProc.Call(uintptr(hdc), 250, uintptr(startY), uintptr(unsafe.Pointer(statusPtr)), uintptr(len(item.status)))
-
-		startY += 23
-	}
-
-	// Alt bilgi footer
-	setTextColor.Call(uintptr(hdc), uintptr(win.RGB(110, 120, 140)))
-	footerStr, _ := windows.UTF16PtrFromString("[INSERT] Menuyu Gizle / Goster")
-	textOutProc.Call(uintptr(hdc), 50, uintptr(startY+5), uintptr(unsafe.Pointer(footerStr)), uintptr(len("[INSERT] Menuyu Gizle / Goster")))
-}
-
 func getStatusText(status bool) string {
 	if status {
 		return "[ AÇIK ]"
