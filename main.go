@@ -163,8 +163,6 @@ var (
 	getConsoleModeProc         = kernel32Proc.NewProc("GetConsoleMode")
 	setConsoleModeProc         = kernel32Proc.NewProc("SetConsoleMode")
 )
-	
-)
 
 const (
 	stdOutputHandle = uintptr(^uint32(0) - 10) // STD_OUTPUT_HANDLE (-11)
