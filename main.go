@@ -158,13 +158,44 @@ var (
 	beepProc                   = kernel32.NewProc("Beep")
 	playSoundProc              = winmm.NewProc("PlaySoundW")
 	fillRectProc               = user32.NewProc("FillRect")
+	kernel32Proc               = windows.NewLazySystemDLL("kernel32.dll")
+	getStdHandleProc           = kernel32Proc.NewProc("GetStdHandle")
+	getConsoleModeProc         = kernel32Proc.NewProc("GetConsoleMode")
+	setConsoleModeProc         = kernel32Proc.NewProc("SetConsoleMode")
+)
+	
 )
 
 const (
+	stdOutputHandle = uintptr(^uint32(0) - 10) // STD_OUTPUT_HANDLE (-11)
+	enableVirtualTerminalProcess = 0x0004
 	SND_FILENAME  = 0x00020000
 	SND_ASYNC     = 0x0001
 	SND_NODEFAULT = 0x0002
 )
+
+func enableConsoleColors() {
+	hOut, _, _ := getStdHandleProc.Call(stdOutputHandle)
+	if hOut == 0 || hOut == uintptr(windows.InvalidHandle) {
+		return
+	}
+	var mode uint32
+	ret, _, _ := getConsoleModeProc.Call(hOut, uintptr(unsafe.Pointer(&mode)))
+	if ret != 0 {
+		setConsoleModeProc.Call(hOut, uintptr(mode|enableVirtualTerminalProcess))
+	}
+}
+
+func consoleText(tr, en string) string {
+	if menuLang == "en" {
+		return en
+	}
+	return tr
+}
+
+func printColored(colorCode, msg string) {
+	fmt.Printf("%s%s\x1b[0m", colorCode, msg)
+}
 
 var (
 	teamCheck           bool    = true
