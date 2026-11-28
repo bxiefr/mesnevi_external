@@ -157,6 +157,7 @@ var (
 	GetAsyncKeyState           = user32.NewProc("GetAsyncKeyState")
 	beepProc                   = kernel32.NewProc("Beep")
 	playSoundProc              = winmm.NewProc("PlaySoundW")
+	fillRectProc               = user32.NewProc("FillRect")
 )
 
 const (
@@ -1334,7 +1335,7 @@ func main() {
 
 	win.SetTimer(hwnd, 1, frameDelay, 0)
 
-	var pid uint32
+	var pid int
 	var err error
 	for {
 		pid, err = findProcessId("cs2.exe")
@@ -1418,8 +1419,8 @@ func main() {
 		selectObject.Call(uintptr(memhdc), bgBrush)
 		selectObject.Call(uintptr(memhdc), font)
 
-		rectFull := win.RECT{Left: 0, Top: 0, Right: int32(screenWidth), Bottom: int32(screenHeight)}
-		win.FillRect(win.HDC(memhdc), &rectFull, win.HGDIOBJ(bgBrush))
+        rectFull := win.RECT{Left: 0, Top: 0, Right: int32(screenWidth), Bottom: int32(screenHeight)}
+		fillRectProc.Call(uintptr(memhdc), uintptr(unsafe.Pointer(&rectFull)), bgBrush)
 
 		activeThemePen := themePens[skeletonColorIndex]
 		skeletonColor = activeThemePen
