@@ -1338,13 +1338,17 @@ func main() {
 
 	var pid int
 	var err error
+	dots := 0
 	for {
 		pid, err = findProcessId("cs2.exe")
 		if err == nil && pid != 0 {
+			fmt.Printf("\r[*] cs2.exe bulundu!     \n")
 			break
 		}
-		fmt.Println("[*] cs2.exe bekleniyor...")
-		time.Sleep(2 * time.Second)
+		dots = (dots % 4) + 1
+		dotStr := strings.Repeat(".", dots) + strings.Repeat(" ", 4-dots)
+		fmt.Printf("\r[*] cs2.exe bekleniyor %s", dotStr)
+		time.Sleep(500 * time.Millisecond)
 	}
 
 	win.ShowWindow(hwnd, win.SW_SHOWDEFAULT)
