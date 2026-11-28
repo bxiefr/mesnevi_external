@@ -601,7 +601,8 @@ footer {
 
     .panel {
         padding: 24px 18px;
-    }}
+    }
+}
 
 @media (prefers-reduced-motion: reduce) {
     .sun,
@@ -671,7 +672,8 @@ footer {
         <div class="stat-card">
             <div class="stat-value">Go 1.27.3</div>
             <div class="stat-label" data-i18n="statEngine"></div>
-        </div>    </div>
+        </div>
+    </div>
 
     <section class="section" id="download">
         <div class="panel">
@@ -732,9 +734,9 @@ const DICT = {
         navDownload: "İndir",
         navFaq: "SSS",
         dlMainTitle: "Stabil Sürümü İndir",
-        dlMainNote: "main branch · sorunsuz",
+        dlMainNote: `stabil · ${DEFAULT_BRANCH}`,
         dlNeonTitle: "Yeni Özellikleri Dene",
-        dlNeonNote: "neon branch · en güncel",
+        dlNeonNote: `en güncel · ${NEON_BRANCH}`,
         autoSuffix: " (Otomatik)",
         faqTitle: "SIKÇA SORULAN SORULAR",
         faqDesc: "Merak edilenler ve kısa cevapları",
@@ -757,7 +759,7 @@ const DICT = {
             },
             {
                 q: "Hangi branch'i indirmeliyim?",
-                a: "En yeni özellikleri istiyorsan neon branch'ini, stabil ve sorunsuz bir sürüm istiyorsan main branch'ini tercih etmelisin."
+                a: `En yeni özellikleri istiyorsan ${NEON_BRANCH} branch'ini, stabil ve sorunsuz bir sürüm istiyorsan ${DEFAULT_BRANCH} branch'ini tercih etmelisin.`
             },
             {
                 q: "Kaynak kodu açık mı?",
@@ -789,9 +791,9 @@ const DICT = {
         navDownload: "Download",
         navFaq: "FAQ",
         dlMainTitle: "Download Stable Build",
-        dlMainNote: "main branch · trouble-free",
+        dlMainNote: `stable · ${DEFAULT_BRANCH}`,
         dlNeonTitle: "Try Newest Features",
-        dlNeonNote: "neon branch · latest",
+        dlNeonNote: `latest · ${NEON_BRANCH}`,
         autoSuffix: " (Auto)",
         faqTitle: "FREQUENTLY ASKED QUESTIONS",
         faqDesc: "Common questions with short answers",
@@ -814,7 +816,7 @@ const DICT = {
             },
             {
                 q: "Which branch should I download?",
-                a: "If you want the newest features, choose the neon branch. If you want a stable, trouble-free version, choose main."
+                a: `If you want the newest features, choose the ${NEON_BRANCH} branch. If you want a stable, trouble-free version, choose ${DEFAULT_BRANCH}.`
             },
             {
                 q: "Is the source code open?",
