@@ -1334,10 +1334,15 @@ func main() {
 
 	win.SetTimer(hwnd, 1, frameDelay, 0)
 
-	pid, err := findProcessId("cs2.exe")
-	if err != nil {
-		logAndSleep("Error finding process ID", err)
-		return
+	var pid uint32
+	var err error
+	for {
+		pid, err = findProcessId("cs2.exe")
+		if err == nil && pid != 0 {
+			break
+		}
+		fmt.Println("[*] cs2.exe bekleniyor...")
+		time.Sleep(2 * time.Second)
 	}
 
 	clientDll, err := getModuleBaseAddress(pid, "client.dll")
@@ -1412,6 +1417,9 @@ func main() {
 		selectObject.Call(uintptr(memhdc), uintptr(memBitmap))
 		selectObject.Call(uintptr(memhdc), bgBrush)
 		selectObject.Call(uintptr(memhdc), font)
+
+		rectFull := win.RECT{Left: 0, Top: 0, Right: int32(screenWidth), Bottom: int32(screenHeight)}
+		win.FillRect(win.HDC(memhdc), &rectFull, win.HGDIOBJ(bgBrush))
 
 		activeThemePen := themePens[skeletonColorIndex]
 		skeletonColor = activeThemePen
