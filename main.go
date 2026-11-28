@@ -274,28 +274,51 @@ func checkForUpdates() {
 		return
 	}
 
-	fmt.Printf("[DEBUG] Remote BuildStamp: %d (%s)\n", remoteStamp, time.Unix(remoteStamp, 0).Format("2006-01-02 15:04:05"))
-	fmt.Printf("[DEBUG] Local  BuildStamp: %d (%s)\n", localStamp, time.Unix(localStamp, 0).Format("2006-01-02 15:04:05"))
+	remoteTimeStr := time.Unix(remoteStamp, 0).Format("2006-01-02 15:04:05")
+	localTimeStr := time.Unix(localStamp, 0).Format("2006-01-02 15:04:05")
+
+	fmt.Printf(consoleText(
+		"\x1b[36m[DEBUG] Remote BuildStamp: %d (%s)\x1b[0m\n",
+		"\x1b[36m[DEBUG] Remote BuildStamp: %d (%s)\x1b[0m\n",
+	), remoteStamp, remoteTimeStr)
+
+	fmt.Printf(consoleText(
+		"\x1b[36m[DEBUG] Local  BuildStamp: %d (%s)\x1b[0m\n",
+		"\x1b[36m[DEBUG] Local  BuildStamp: %d (%s)\x1b[0m\n",
+	), localStamp, localTimeStr)
 
 	if remoteStamp <= localStamp {
-		fmt.Println("[*] Guncel. Baslatiliyor...")
+		fmt.Print(consoleText(
+			"\x1b[32m[*] Güncel. Başlatılıyor...\x1b[0m\n",
+			"\x1b[32m[*] Up to date. Starting...\x1b[0m\n",
+		))
 		return
 	}
 
-	fmt.Printf("\n[!] Yeni build bulundu (%s). Guncellemek ister misin? [Y/N]: ", time.Unix(remoteStamp, 0).Format("2006-01-02 15:04"))
+	shortTimeStr := time.Unix(remoteStamp, 0).Format("2006-01-02 15:04")
+	fmt.Printf(consoleText(
+		"\n\x1b[33m[!] Yeni build bulundu (%s). Güncellemek ister misin? [Y/N]: \x1b[0m",
+		"\n\x1b[33m[!] New build found (%s). Do you want to update? [Y/N]: \x1b[0m",
+	), shortTimeStr)
 
 	var choice string
 	_, _ = fmt.Scanln(&choice)
 	choice = strings.TrimSpace(strings.ToUpper(choice))
 
-	if choice != "Y" && choice != "EVET" {
-		fmt.Println("[*] Guncelleme atlandi. Hile baslatiliyor...")
+	if choice != "Y" && choice != "EVET" && choice != "YES" {
+		fmt.Print(consoleText(
+			"\x1b[33m[*] Güncelleme atlandı. Başlatılıyor...\x1b[0m\n",
+			"\x1b[33m[*] Update skipped. Starting...\x1b[0m\n",
+		))
 		return
 	}
 
 	for _, asset := range release.Assets {
 		if asset.Name == "mesnevi.exe" {
-			fmt.Println("[*] Guncelleme indiriliyor...")
+			fmt.Print(consoleText(
+				"\x1b[36m[*] Güncelleme indiriliyor...\x1b[0m\n",
+				"\x1b[36m[*] Downloading update...\x1b[0m\n",
+			))
 			downloadAndUpdate(asset.BrowserDownloadURL)
 			break
 		}
