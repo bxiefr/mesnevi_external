@@ -365,6 +365,11 @@ func getConfigPath() string {
 }
 
 func saveConfig() {
+	lang := menuLang
+	if lang != "tr" && lang != "en" {
+		lang = "tr"
+	}
+
 	cfg := Config{
 		TeamCheck:           teamCheck,
 		HeadCircle:          headCircle,
@@ -380,13 +385,7 @@ func saveConfig() {
 		BombTimerRendering:  bombTimerRendering,
 		SkeletonColorIndex:  skeletonColorIndex,
 		MenuLang:            lang,
-
-	if cfg.MenuLang == "tr" || cfg.MenuLang == "en" {
-		menuLang = cfg.MenuLang
-	} else if menuLang == "" {
-		menuLang = "tr"
 	}
-}
 
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err == nil {
@@ -418,7 +417,9 @@ func loadConfig() {
 		skeletonColorIndex = cfg.SkeletonColorIndex
 		if cfg.MenuLang == "tr" || cfg.MenuLang == "en" {
 			menuLang = cfg.MenuLang
-			}
+		} else if menuLang == "" {
+			menuLang = "tr"
+		}
 	}
 }
 
