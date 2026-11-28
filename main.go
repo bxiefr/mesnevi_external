@@ -1332,6 +1332,7 @@ func main() {
 		return
 	}
 	defer win.DestroyWindow(hwnd)
+	win.ShowWindow(hwnd, win.SW_HIDE)
 
 	win.SetTimer(hwnd, 1, frameDelay, 0)
 
@@ -1345,6 +1346,8 @@ func main() {
 		fmt.Println("[*] cs2.exe bekleniyor...")
 		time.Sleep(2 * time.Second)
 	}
+
+	win.ShowWindow(hwnd, win.SW_SHOWDEFAULT)
 
 	clientDll, err := getModuleBaseAddress(pid, "client.dll")
 	if err != nil {
