@@ -1352,6 +1352,7 @@ func listenHotkeys() {
 }
 
 func main() {
+	enableConsoleColors()
 	checkForUpdates()
 
 	setPriorityClass.Call(uintptr(windows.CurrentProcess()), 0x00008000)
@@ -1373,18 +1374,24 @@ func main() {
 
 	win.SetTimer(hwnd, 1, frameDelay, 0)
 
-	var pid int
+    var pid int
 	var err error
 	dots := 0
 	for {
 		pid, err = findProcessId("cs2.exe")
 		if err == nil && pid != 0 {
-			fmt.Printf("\r[*] cs2.exe bulundu!     \n")
+			fmt.Print(consoleText(
+				"\r\x1b[32m[*] cs2.exe bulundu!     \x1b[0m\n",
+				"\r\x1b[32m[*] cs2.exe found!       \x1b[0m\n",
+			))
 			break
 		}
 		dots = (dots % 4) + 1
 		dotStr := strings.Repeat(".", dots) + strings.Repeat(" ", 4-dots)
-		fmt.Printf("\r[*] cs2.exe bekleniyor %s", dotStr)
+		fmt.Printf(consoleText(
+			"\r\x1b[33m[*] cs2.exe bekleniyor %s\x1b[0m",
+			"\r\x1b[33m[*] Waiting for cs2.exe %s\x1b[0m",
+		), dotStr)
 		time.Sleep(500 * time.Millisecond)
 	}
 
