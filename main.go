@@ -379,7 +379,14 @@ func saveConfig() {
 		HitSoundRendering:   hitSoundRendering,
 		BombTimerRendering:  bombTimerRendering,
 		SkeletonColorIndex:  skeletonColorIndex,
+		MenuLang:            lang,
+
+	if cfg.MenuLang == "tr" || cfg.MenuLang == "en" {
+		menuLang = cfg.MenuLang
+	} else if menuLang == "" {
+		menuLang = "tr"
 	}
+}
 
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err == nil {
